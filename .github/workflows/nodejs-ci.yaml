@@ -25,9 +25,10 @@ jobs:
       # Find services with Node.js
       - name: Discover Node.js Services
         id: discover
+        working-directory: services
         run: |
           services=$(find . -name package.json -not -path "*/node_modules/*" | xargs -n1 dirname | sed 's|^\./||' | paste -sd ',')
-          echo "services=$services" >> $GITHUB_OUTPUT
+          echo "services=[$services]" >> $GITHUB_OUTPUT
 
   build-and-test:
     name: Build and Test Node.js Services
