@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   discover-and-build:
     name: Discover and Build Node.js Services
@@ -32,7 +36,7 @@ jobs:
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.discover.outputs.services) }}
+        service: ${{ fromJson(env.services) }}
 
     steps:
       # Check out the code
@@ -72,7 +76,7 @@ jobs:
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.discover.outputs.services) }}
+        service: ${{ fromJson(env.services) }}
 
     steps:
       # Check out the code
@@ -92,7 +96,7 @@ jobs:
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            TAG=${{ github.event.pull_request.number }}
+            TAG=pr-${{ github.event.pull_request.number }}
           else
             TAG=latest
           fi
@@ -113,5 +117,5 @@ jobs:
         working-directory: ${{ matrix.service }}
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
-          TAG=${{ github.event.pull_request.number }}
+          TAG=pr-${{ github.event.pull_request.number }}
           docker push $IMAGE_NAME:$TAG
