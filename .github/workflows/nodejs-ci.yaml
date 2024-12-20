@@ -27,7 +27,7 @@ jobs:
         id: discover
         run: |
           services=$(find . -name package.json -not -path "*/node_modules/*" | xargs -n1 dirname | sed 's|^\./||' | paste -sd ',')
-          echo "services=$services" >> $GITHUB_ENV
+          echo "services=$services" >> $GITHUB_OUTPUT
 
   build-and-test:
     name: Build and Test Node.js Services
@@ -36,7 +36,7 @@ jobs:
 
     strategy:
       matrix:
-        service: ${{ fromJson(env.services) }}
+        service: ${{ fromJson(needs.discover.outputs.services) }}
 
     steps:
       # Check out the code
@@ -76,7 +76,7 @@ jobs:
 
     strategy:
       matrix:
-        service: ${{ fromJson(env.services) }}
+        service: ${{ fromJson(needs.discover.outputs.services) }}
 
     steps:
       # Check out the code
