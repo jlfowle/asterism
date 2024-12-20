@@ -38,30 +38,31 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Set working directory for the service
-      - name: Set Working Directory
-        working-directory: ${{ matrix.service }}
-
       # Set up Node.js environment
       - name: Set up Node.js
+        working-directory: ${{ matrix.service }}
         uses: actions/setup-node@v3
         with:
           node-version: '20'
 
       # Install dependencies
       - name: Install Dependencies
+        working-directory: ${{ matrix.service }}
         run: yarn install
 
       # Run tests
       - name: Run Tests
+        working-directory: ${{ matrix.service }}
         run: yarn test
 
       # Lint the code
       - name: Lint Code
+        working-directory: ${{ matrix.service }}
         run: yarn lint
 
       # Build the application
       - name: Build Application
+        working-directory: ${{ matrix.service }}
         run: yarn build
 
   docker-build:
@@ -78,10 +79,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Set working directory for the service
-      - name: Set Working Directory
-        working-directory: ${{ matrix.service }}
-
       # Log in to GitHub Container Registry
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
@@ -91,6 +88,7 @@ jobs:
 
       # Build Docker image
       - name: Build Docker Image
+        working-directory: ${{ matrix.service }}
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
@@ -103,6 +101,7 @@ jobs:
       # Push Docker image
       - name: Push Docker Image
         if: github.event_name == 'push' && github.ref_name == 'main'
+        working-directory: ${{ matrix.service }}
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
           TAG=latest
@@ -111,6 +110,7 @@ jobs:
       # Push PR-specific Docker image
       - name: Push PR Docker Image
         if: github.event_name == 'pull_request'
+        working-directory: ${{ matrix.service }}
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
           TAG=${{ github.event.pull_request.number }}
