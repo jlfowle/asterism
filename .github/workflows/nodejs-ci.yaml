@@ -22,7 +22,8 @@ jobs:
       - name: Discover Node.js Services
         id: discover
         run: |
-          echo "::set-output name=services::$(find . -name package.json | xargs -n1 dirname | paste -sd "," -)"
+          services=$(find . -name package.json -not -path "*/node_modules/*" | xargs -n1 dirname | sed 's|^\./||' | paste -sd ',')
+          echo "services=$services" >> $GITHUB_ENV
 
   build-and-test:
     name: Build and Test Node.js Services
