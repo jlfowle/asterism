@@ -1,0 +1,117 @@
+name: CI Pipeline for Node.js Services
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  discover-and-build:
+    name: Discover and Build Node.js Services
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Find services with Node.js
+      - name: Discover Node.js Services
+        id: discover
+        run: |
+          echo "::set-output name=services::$(find . -name package.json | xargs -n1 dirname | paste -sd "," -)"
+
+  build-and-test:
+    name: Build and Test Node.js Services
+    needs: discover-and-build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.discover.outputs.services) }}
+
+    steps:
+      # Check out the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Set working directory for the service
+      - name: Set Working Directory
+        working-directory: ${{ matrix.service }}
+
+      # Set up Node.js environment
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      # Install dependencies
+      - name: Install Dependencies
+        run: yarn install
+
+      # Run tests
+      - name: Run Tests
+        run: yarn test
+
+      # Lint the code
+      - name: Lint Code
+        run: yarn lint
+
+      # Build the application
+      - name: Build Application
+        run: yarn build
+
+  docker-build:
+    name: Build and Push Docker Images
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.discover.outputs.services) }}
+
+    steps:
+      # Check out the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Set working directory for the service
+      - name: Set Working Directory
+        working-directory: ${{ matrix.service }}
+
+      # Log in to GitHub Container Registry
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.GITHUB_ACTOR }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build Docker image
+      - name: Build Docker Image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            TAG=${{ github.event.pull_request.number }}
+          else
+            TAG=latest
+          fi
+          docker build -t $IMAGE_NAME:$TAG .
+
+      # Push Docker image
+      - name: Push Docker Image
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
+          TAG=latest
+          docker push $IMAGE_NAME:$TAG
+
+      # Push PR-specific Docker image
+      - name: Push PR Docker Image
+        if: github.event_name == 'pull_request'
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
+          TAG=${{ github.event.pull_request.number }}
+          docker push $IMAGE_NAME:$TAG
