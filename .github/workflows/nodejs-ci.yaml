@@ -37,7 +37,7 @@ jobs:
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.discover.outputs.services) }}
+        service: ${{ needs.discover.outputs.services }}
 
     steps:
       # Check out the code
