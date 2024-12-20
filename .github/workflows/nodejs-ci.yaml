@@ -55,22 +55,22 @@ jobs:
 
       # Install dependencies
       - name: Install Dependencies
-        working-directory: ${{ matrix.service }}
+        working-directory: services/${{ matrix.service }}
         run: yarn install
 
       # Run tests
       - name: Run Tests
-        working-directory: ${{ matrix.service }}
+        working-directory: services/${{ matrix.service }}
         run: yarn test
 
       # Lint the code
       - name: Lint Code
-        working-directory: ${{ matrix.service }}
+        working-directory: services/${{ matrix.service }}
         run: yarn lint
 
       # Build the application
       - name: Build Application
-        working-directory: ${{ matrix.service }}
+        working-directory: services/${{ matrix.service }}
         run: yarn build
 
   docker-build:
@@ -96,7 +96,7 @@ jobs:
 
       # Build Docker image
       - name: Build Docker Image
-        working-directory: ${{ matrix.service }}
+        working-directory: services/${{ matrix.service }}
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
@@ -109,7 +109,7 @@ jobs:
       # Push Docker image
       - name: Push Docker Image
         if: github.event_name == 'push' && github.ref_name == 'main'
-        working-directory: ${{ matrix.service }}
+        working-directory: services/${{ matrix.service }}
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
           TAG=latest
@@ -118,7 +118,7 @@ jobs:
       # Push PR-specific Docker image
       - name: Push PR Docker Image
         if: github.event_name == 'pull_request'
-        working-directory: ${{ matrix.service }}
+        working-directory: services/${{ matrix.service }}
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
           TAG=pr-${{ github.event.pull_request.number }}
