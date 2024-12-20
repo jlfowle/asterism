@@ -29,6 +29,9 @@ jobs:
         run: |
           services=$(find . -name package.json -not -path "*/node_modules/*" | xargs -n1 dirname | sed 's|^\./||' | paste -sd '"","')
           echo "services=[\"$services\"]" >> $GITHUB_OUTPUT
+    
+    outputs:
+      services: ${{  fromJson(steps.discover.outputs.services) }}
 
   build-and-test:
     name: Build and Test Node.js Services
@@ -37,7 +40,7 @@ jobs:
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.discover-and-build.outputs.services) }}
+        service: ${{ needs.discover-and-build.outputs.services }}
 
     steps:
       # Check out the code
@@ -77,7 +80,7 @@ jobs:
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.discover-and-build.outputs.services) }}
+        service: ${{ needs.discover-and-build.outputs.services }}
 
     steps:
       # Check out the code
