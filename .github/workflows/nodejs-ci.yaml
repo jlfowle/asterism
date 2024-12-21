@@ -75,7 +75,9 @@ jobs:
 
   docker-build:
     name: Build and Push Docker Images
-    needs: build-and-test
+    needs:
+      - build-and-test
+      - discover-and-build
     runs-on: ubuntu-latest
 
     strategy:
