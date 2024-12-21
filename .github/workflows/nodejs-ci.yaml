@@ -15,7 +15,7 @@ permissions:
 jobs:
   discover-and-build:
     name: Discover and Build Node.js Services
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       # Check out the code
@@ -36,7 +36,7 @@ jobs:
   build-and-test:
     name: Build and Test Node.js Services
     needs: discover-and-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
@@ -78,7 +78,7 @@ jobs:
     needs:
       - build-and-test
       - discover-and-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
