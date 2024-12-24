@@ -89,6 +89,12 @@ jobs:
           path: services/${{ matrix.service }}/test-results
 
       # Upload test results
+      - name: Test Reports
+        uses: xportation/junit-coverage-report@main
+        with:
+          junit-path: services/${{ matrix.service }}/test-results/junit.xml  
+          coverage-path: services/${{ matrix.service }}/coverage/coverage-summary.json
+      
       - name: Test Summary
         uses: test-summary/action@v2
         with:
