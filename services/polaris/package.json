@@ -67,9 +67,11 @@
         }
       ]
     ],
+    "collectCoverage": true,
     "coverageReporters": [
       "json",
       "lcov",
+      "cobertura",
       "text",
       "clover"
     ]
