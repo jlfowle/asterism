@@ -73,11 +73,6 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: yarn build
 
-      # Generate code coverage
-      - name: Generate Code Coverage
-        working-directory: services/${{ matrix.service }}
-        run: yarn coverage
-
       # Upload code coverage report
       - name: Upload Code Coverage Report
         uses: actions/upload-artifact@v3
