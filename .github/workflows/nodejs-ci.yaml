@@ -73,6 +73,60 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: yarn build
 
+      # Generate code coverage
+      - name: Generate Code Coverage
+        working-directory: services/${{ matrix.service }}
+        run: yarn coverage
+
+      # Upload code coverage report
+      - name: Upload Code Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-${{ matrix.service }}
+          path: services/${{ matrix.service }}/coverage
+
+      # Upload test results
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.service }}
+          path: services/${{ matrix.service }}/test-results
+
+      # Post PR comment with build metadata
+      - name: Post PR Comment
+        if: github.event_name == 'pull_request'
+        working-directory: services/${{ matrix.service }}
+        run: |
+          const { context } = require('@actions/github');
+          const fs = require('fs');
+          const path = require('path');
+
+          const buildOutput = fs.readFileSync(path.join('coverage', 'coverage-summary.json'), 'utf8');
+          const testOutput = fs.readFileSync(path.join('test-results', 'junit.xml'), 'utf8');
+
+          const commentBody = `
+          ## Build and Test Results
+          **Build Output:**
+          \`\`\`
+          ${buildOutput}
+          \`\`\`
+          **Test Output:**
+          \`\`\`
+          ${testOutput}
+          \`\`\`
+          `;
+
+          const issue_number = context.payload.pull_request.number;
+          const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+
+          octokit.issues.createComment({
+            ...context.repo,
+            issue_number,
+            body: commentBody
+          });
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   docker-build:
     name: Build and Push Docker Images
     needs:
