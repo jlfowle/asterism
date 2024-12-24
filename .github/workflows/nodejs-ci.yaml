@@ -98,9 +98,9 @@ jobs:
         uses: actions/github-script@v3
         with:
           script: |
-            const { context } = require('@actions/github');
             const fs = require('fs');
             const path = require('path');
+            const { context, github } = require('@actions/github');
 
             const coveragePath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'coverage', 'coverage-summary.json');
             const testResultsPath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'test-results', 'junit.xml');
