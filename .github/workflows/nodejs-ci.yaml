@@ -88,6 +88,21 @@ jobs:
           name: test-results-${{ matrix.service }}
           path: services/${{ matrix.service }}/test-results
 
+      # Upload test results
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "services/${{ matrix.service }}/test-results/junit.xml"
+          output: test-summary.md
+        if: always()
+
+      - name: Upload test summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.service }}-summary
+          path: test-summary.md
+        if: always()
+
       # Post PR comment with build metadata
       - name: Post PR Comment
         if: github.event_name == 'pull_request'
