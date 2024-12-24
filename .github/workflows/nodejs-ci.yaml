@@ -90,7 +90,7 @@ jobs:
       # Post PR comment with build metadata
       - name: Post PR Comment
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v3
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
