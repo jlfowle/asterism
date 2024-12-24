@@ -100,7 +100,6 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const github = require('@actions/github');
 
             const coveragePath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'coverage', 'coverage-summary.json');
             const testResultsPath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'test-results', 'junit.xml');
