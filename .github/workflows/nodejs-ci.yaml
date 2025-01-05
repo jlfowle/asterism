@@ -90,10 +90,10 @@ jobs:
 
       # Upload test results
       - name: Test Reports
-        uses: xportation/junit-coverage-report@main
+        uses: xportation/junit-coverage-report@v1.0.3
         with:
           junit-path: services/${{ matrix.service }}/test-results/junit.xml  
-          coverage-path: services/${{ matrix.service }}/coverage/coverage-summary.xml
+          coverage-path: services/${{ matrix.service }}/coverage/clover.xml
       
       - name: Test Summary
         uses: test-summary/action@v2
