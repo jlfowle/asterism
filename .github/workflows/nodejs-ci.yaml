@@ -118,7 +118,7 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            const coveragePath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'coverage', 'coverage-summary.json');
+            const coveragePath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'coverage', 'clover.xml');
             const testResultsPath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'test-results', 'junit.xml');
 
             const buildOutput = fs.readFileSync(coveragePath, 'utf8');
