@@ -99,14 +99,14 @@ jobs:
         uses: test-summary/action@v2
         with:
           paths: "services/${{ matrix.service }}/test-results/junit.xml"
-          output: test-summary.md
+          output: "services/${{ matrix.service }}/test-results/test-summary.md"
         if: always()
 
       - name: Upload test summary
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.service }}-summary
-          path: test-summary.md
+          name: test-results-${{ matrix.service }}-summary.md
+          path: "services/${{ matrix.service }}/test-results/test-summary.md"
         if: always()
 
       # Post PR comment with build metadata
@@ -118,22 +118,13 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            const coveragePath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'coverage', 'clover.xml');
-            const testResultsPath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'test-results', 'junit.xml');
-
-            const buildOutput = fs.readFileSync(coveragePath, 'utf8');
-            const testOutput = fs.readFileSync(testResultsPath, 'utf8');
+            const testSummaryPath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'teste-results', 'test-summary.md');
+            const testSummary = fs.readFileSync(testSummaryPath, 'utf8');
 
             const commentBody = `
             ## Build and Test Results
-            **Build Output:**
-            \`\`\`
-            ${buildOutput}
-            \`\`\`
-            **Test Output:**
-            \`\`\`
-            ${testOutput}
-            \`\`\`
+            **Test Summary:**
+            ${testSummary}
             `;
 
             const issue_number = context.payload.pull_request.number;
