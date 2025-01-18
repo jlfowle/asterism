@@ -76,16 +76,16 @@ jobs:
 
       # Upload code coverage report
       - name: Upload Code Coverage Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: code-coverage-${{ matrix.service }}
+          name: ${{ matrix.service }}-code-coverage
           path: services/${{ matrix.service }}/coverage
 
       # Upload test results
       - name: Upload Test Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.service }}
+          name: ${{ matrix.service }}-test-results
           path: services/${{ matrix.service }}/test-results
 
       # # Upload test results
@@ -103,7 +103,7 @@ jobs:
         if: always()
 
       - name: Upload test summary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.service }}-summary
           path: test-summary.md
