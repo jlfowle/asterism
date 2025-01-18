@@ -109,34 +109,11 @@ jobs:
           path: "services/${{ matrix.service }}/test-results/test-summary.md"
         if: always()
 
-      # Post PR comment with build metadata
-      - name: Post PR Comment
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+      - name: Comment PR with test summary
+        uses: thollander/actions-comment-pull-request@v3
         with:
-          script: |
-            const fs = require('fs');
-            const path = require('path');
-
-            const testSummaryPath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'test-results', 'test-summary.md');
-            const testSummary = fs.readFileSync(testSummaryPath, 'utf8');
-
-            const commentBody = `
-            ## Build and Test Results
-            **Test Summary:**
-            ${testSummary}
-            `;
-
-            const issue_number = context.payload.pull_request.number;
-
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: commentBody
-            });
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          file-path: "services/${{ matrix.service }}/test-results/test-summary.md"
+          comment-tag: test-results-${{ matrix.service }}-summary
 
   docker-build:
     name: Build and Push Docker Images
