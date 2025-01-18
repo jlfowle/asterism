@@ -118,7 +118,7 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            const testSummaryPath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'teste-results', 'test-summary.md');
+            const testSummaryPath = path.join(process.env.GITHUB_WORKSPACE, 'services', '${{ matrix.service }}', 'test-results', 'test-summary.md');
             const testSummary = fs.readFileSync(testSummaryPath, 'utf8');
 
             const commentBody = `
