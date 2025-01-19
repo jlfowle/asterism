@@ -87,13 +87,6 @@ jobs:
         with:
           name: ${{ matrix.service }}-test-results
           path: services/${{ matrix.service }}/test-results
-
-      # # Upload test results
-      # - name: Test Reports
-      #   uses: xportation/junit-coverage-report@v1.0.3
-      #   with:
-      #     junit-path: services/${{ matrix.service }}/test-results/junit.xml  
-      #     coverage-path: services/${{ matrix.service }}/coverage/clover.xml
       
       - name: Test Summary
         uses: test-summary/action@v2
@@ -109,11 +102,24 @@ jobs:
           path: "services/${{ matrix.service }}/test-results/test-summary.md"
         if: always()
 
-      - name: Comment PR with test summary
+  aggregate-test-summaries:
+    name: Aggregate Test Summaries
+    needs: build-and-test
+    runs-on: ubuntu-24.04
+
+    steps:
+
+      - name: Download all test summaries
+        uses: actions/download-artifact@v3
+        with:
+          name: 'test-results-*-summary.md'
+          path: test-summaries
+
+      - name: Comment PR with aggregated test summary
         uses: thollander/actions-comment-pull-request@v3
         with:
-          file-path: "services/${{ matrix.service }}/test-results/test-summary.md"
-          comment-tag: test-results-${{ matrix.service }}-summary
+          file-path: test-summaries/test-results-*-summary.md
+          comment-tag: aggregated-test-summary
 
   docker-build:
     name: Build and Push Docker Images
