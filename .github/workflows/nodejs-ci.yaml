@@ -113,13 +113,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: 'test-results-*-summary.md'
-          path: test-summaries
           merge-multiple: true
 
       - name: Comment PR with aggregated test summary
         uses: thollander/actions-comment-pull-request@v3
         with:
-          file-path: test-summaries/test-results-*-summary.md
+          file-path: test-results-*-summary.md
           comment-tag: aggregated-test-summary
 
   docker-build:
