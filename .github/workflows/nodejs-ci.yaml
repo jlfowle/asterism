@@ -85,22 +85,9 @@ jobs:
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.service }}-test-results
-          path: services/${{ matrix.service }}/test-results
+          name: ${{ matrix.service }}-test-results.xml
+          path: services/${{ matrix.service }}/test-results/junit.xml
       
-      - name: Test Summary
-        uses: test-summary/action@v2
-        with:
-          paths: "services/${{ matrix.service }}/test-results/junit.xml"
-          output: "services/${{ matrix.service }}/test-results/test-summary.md"
-        if: always()
-
-      - name: Upload test summary
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.service }}-summary.md
-          path: "services/${{ matrix.service }}/test-results/test-summary.md"
-        if: always()
 
   aggregate-test-summaries:
     name: Aggregate Test Summaries
@@ -112,14 +99,21 @@ jobs:
       - name: Download all test summaries
         uses: actions/download-artifact@v4
         with:
-          pattern: 'test-results-*-summary.md'
+          pattern: '*-test-results.xml'
           merge-multiple: true
+
+      - name: Generate aggregated test summary
+        uses: test-summary/action@v2
+        with:
+          paths: '*-test-results.xml'
+          output: 'test-summary.md'
+        if: always()
 
       - name: Comment PR with aggregated test summary
         uses: thollander/actions-comment-pull-request@v3
         with:
-          file-path: test-results-*-summary.md
-          comment-tag: aggregated-test-summary
+          file-path: 'test-summary.md'
+          comment-tag: test-summary
 
   docker-build:
     name: Build and Push Docker Images
