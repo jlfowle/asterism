@@ -102,6 +102,11 @@ jobs:
           pattern: '*-test-results.xml'
           merge-multiple: true
 
+      - name: Display structure of downloaded files
+        run: |
+          ls -R
+          cat *-test-results.xml
+
       - name: Generate aggregated test summary
         uses: test-summary/action@v2
         with:
