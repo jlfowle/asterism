@@ -85,8 +85,8 @@ jobs:
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.service }}-test-results.xml
-          path: services/${{ matrix.service }}/test-results/junit.xml
+          name: ${{ matrix.service }}-test-results
+          path: services/${{ matrix.service }}/test-results/
       
 
   aggregate-test-summaries:
@@ -99,18 +99,17 @@ jobs:
       - name: Download all test summaries
         uses: actions/download-artifact@v4
         with:
-          pattern: '*-test-results.xml'
-          merge-multiple: true
+          pattern: '*-test-results'
 
       - name: Display structure of downloaded files
         run: |
-          ls -R
-          cat *-test-results.xml
+          ls -R *-test-results
+          cat *-test-results/junit.xml
 
       - name: Generate aggregated test summary
         uses: test-summary/action@v2
         with:
-          paths: '*-test-results.xml'
+          paths: '*-test-results/junit.xml'
           output: 'test-summary.md'
         if: always()
 
