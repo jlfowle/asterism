@@ -35,7 +35,9 @@ jobs:
         id: set_output_version
         run: |
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            VERSION=${{ steps.get_next_version.outputs.version }}-pr.${{ github.event.pull_request.number }}+commit.${{ github.event.pull_request.number }}
+            SHA=${{ github.sha }}
+            SHORT_SHA=${SHA::7}
+            VERSION=${{ steps.get_next_version.outputs.version }}-pr.${{ github.event.pull_request.number }}-commit.${SHORT_SHA}
           else
             VERSION=${{ steps.get_next_version.outputs.version }}
           fi
