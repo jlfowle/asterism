@@ -14,6 +14,36 @@ permissions:
   pull-requests: write
 
 jobs:
+  metadata:
+    name: Get Version
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Get next version
+        id: get_next_version
+        uses: thenativeweb/get-next-version@2.6.3
+        with:
+          prefix: 'v'
+      
+      - name: Set output version
+        id: set_output_version
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            VERSION=${{ steps.get_next_version.outputs.version }}-pr.${{ github.event.pull_request.number }}+commit.${{ github.event.pull_request.number }}
+          else
+            VERSION=${{ steps.get_next_version.outputs.version }}
+          fi
+          echo "version="$VERSION" >> $GITHUB_OUTPUT
+
+    outputs:
+      version: ${{ steps.set_output_version.outputs.version }}
+
   discover-and-build:
     name: Discover and Build Node.js Services
     runs-on: ubuntu-24.04
@@ -54,25 +84,20 @@ jobs:
         with:
           node-version: '20'
 
-      # Install dependencies
-      - name: Install Dependencies
-        working-directory: services/${{ matrix.service }}
-        run: yarn install
-
       # Run tests
       - name: Run Tests
         working-directory: services/${{ matrix.service }}
-        run: yarn test
+        run: make test
 
       # Lint the code
       - name: Lint Code
         working-directory: services/${{ matrix.service }}
-        run: yarn lint
+        run: make lint
 
       # Build the application
       - name: Build Application
         working-directory: services/${{ matrix.service }}
-        run: yarn build
+        run: make build
 
       # Upload code coverage report
       - name: Upload Code Coverage Report
@@ -124,6 +149,7 @@ jobs:
     needs:
       - build-and-test
       - discover-and-build
+      - metadata
     runs-on: ubuntu-24.04
 
     strategy:
@@ -148,27 +174,11 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            TAG=pr-${{ github.event.pull_request.number }}
-          else
-            TAG=latest
-          fi
-          docker build -t $IMAGE_NAME:$TAG .
+          docker build -t $IMAGE_NAME:${{ needs.metadata.outputs.version }} .
 
       # Push Docker image
       - name: Push Docker Image
-        if: github.event_name == 'push' && github.ref_name == 'main'
         working-directory: services/${{ matrix.service }}
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
-          TAG=latest
-          docker push $IMAGE_NAME:$TAG
-
-      # Push PR-specific Docker image
-      - name: Push PR Docker Image
-        if: github.event_name == 'pull_request'
-        working-directory: services/${{ matrix.service }}
-        run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
-          TAG=pr-${{ github.event.pull_request.number }}
-          docker push $IMAGE_NAME:$TAG
+          docker push $IMAGE_NAME:${{ needs.metadata.outputs.version }}
