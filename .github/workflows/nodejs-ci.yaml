@@ -184,3 +184,23 @@ jobs:
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
           docker push $IMAGE_NAME:${{ needs.metadata.outputs.version }}
+
+  create-release:
+    name: Create GitHub Release
+    needs:
+      - discover-and-build
+      - metadata
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.metadata.outputs.version }}
+          release_name: ${{ needs.metadata.outputs.version }}
+          draft: false
+          prerelease: true
