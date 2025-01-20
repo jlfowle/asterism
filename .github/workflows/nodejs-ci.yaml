@@ -39,7 +39,7 @@ jobs:
           else
             VERSION=${{ steps.get_next_version.outputs.version }}
           fi
-          echo "version="$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     outputs:
       version: ${{ steps.set_output_version.outputs.version }}
