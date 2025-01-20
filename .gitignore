@@ -6,6 +6,7 @@ yarn-error.log*
 .nyc_output/
 coverage/
 .cache/
+dist/
 
 # Logs
 logs
@@ -29,3 +30,7 @@ pids
 
 # Environment variables
 .env*
+
+# Standard folders
+coverage/
+test-results/

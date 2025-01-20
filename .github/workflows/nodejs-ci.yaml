@@ -1,0 +1,206 @@
+name: CI Pipeline for Node.js Services
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+jobs:
+  metadata:
+    name: Get Version
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Get next version
+        id: get_next_version
+        uses: thenativeweb/get-next-version@2.6.3
+        with:
+          prefix: 'v'
+      
+      - name: Set output version
+        id: set_output_version
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            SHA=${{ github.sha }}
+            SHORT_SHA=${SHA::7}
+            VERSION=${{ steps.get_next_version.outputs.version }}-pr.${{ github.event.pull_request.number }}-commit.${SHORT_SHA}
+          else
+            VERSION=${{ steps.get_next_version.outputs.version }}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    outputs:
+      version: ${{ steps.set_output_version.outputs.version }}
+
+  discover-and-build:
+    name: Discover and Build Node.js Services
+    runs-on: ubuntu-24.04
+
+    steps:
+      # Check out the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Find services with Node.js
+      - name: Discover Node.js Services
+        id: discover
+        working-directory: services
+        run: |
+          services=$(find . -name package.json -not -path "*/node_modules/*" | xargs -n1 dirname | sed 's|^\./||' | paste -sd '"","')
+          echo "services=[\"$services\"]" >> $GITHUB_OUTPUT
+    
+    outputs:
+      services: ${{ steps.discover.outputs.services }}
+
+  build-and-test:
+    name: Build and Test Node.js Services
+    needs: discover-and-build
+    runs-on: ubuntu-24.04
+
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.discover-and-build.outputs.services) }}
+
+    steps:
+      # Check out the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Set up Node.js environment
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Run tests
+      - name: Run Tests
+        working-directory: services/${{ matrix.service }}
+        run: make test
+
+      # Lint the code
+      - name: Lint Code
+        working-directory: services/${{ matrix.service }}
+        run: make lint
+
+      # Build the application
+      - name: Build Application
+        working-directory: services/${{ matrix.service }}
+        run: make build
+
+      # Upload code coverage report
+      - name: Upload Code Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-code-coverage
+          path: services/${{ matrix.service }}/coverage
+
+      # Upload test results
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-test-results
+          path: services/${{ matrix.service }}/test-results/
+      
+
+  aggregate-test-summaries:
+    name: Aggregate Test Summaries
+    needs: build-and-test
+    runs-on: ubuntu-24.04
+
+    steps:
+
+      - name: Download all test summaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-test-results'
+
+      - name: Display structure of downloaded files
+        run: |
+          ls -R *-test-results
+          cat *-test-results/junit.xml
+
+      - name: Generate aggregated test summary
+        uses: test-summary/action@v2
+        with:
+          paths: '*-test-results/junit.xml'
+          output: 'test-summary.md'
+        if: always()
+
+      - name: Comment PR with aggregated test summary
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          file-path: 'test-summary.md'
+          comment-tag: test-summary
+
+  docker-build:
+    name: Build and Push Docker Images
+    needs:
+      - build-and-test
+      - discover-and-build
+      - metadata
+    runs-on: ubuntu-24.04
+
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.discover-and-build.outputs.services) }}
+
+    steps:
+      # Check out the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Log in to GitHub Container Registry
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build Docker image
+      - name: Build Docker Image
+        working-directory: services/${{ matrix.service }}
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
+          docker build -t $IMAGE_NAME:${{ needs.metadata.outputs.version }} .
+
+      # Push Docker image
+      - name: Push Docker Image
+        working-directory: services/${{ matrix.service }}
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
+          docker push $IMAGE_NAME:${{ needs.metadata.outputs.version }}
+
+  create-release:
+    name: Create GitHub Release
+    needs:
+      - discover-and-build
+      - metadata
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.metadata.outputs.version }}
+          release_name: ${{ needs.metadata.outputs.version }}
+          draft: false
+          prerelease: true
