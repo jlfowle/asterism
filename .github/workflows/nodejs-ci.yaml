@@ -9,7 +9,7 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   pull-requests: write
 
@@ -188,7 +188,7 @@ jobs:
   create-release:
     name: Create GitHub Release
     needs:
-      - discover-and-build
+      - docker-build
       - metadata
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
