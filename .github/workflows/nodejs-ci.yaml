@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - main
-  pull_request:
+  pull_request: 
+    types:
+      - synchronize
     branches:
       - main
 
@@ -140,8 +142,16 @@ jobs:
           output: 'test-summary.md'
         if: always()
 
+      # Upload test results
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-summary.md
+          path: test-summary.md
+
       - name: Comment PR with aggregated test summary
         uses: thollander/actions-comment-pull-request@v3
+        if: github.event_name == 'pull_request'
         with:
           file-path: 'test-summary.md'
           comment-tag: test-summary
