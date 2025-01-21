@@ -17,3 +17,6 @@ lint: node_modules
 node_modules: package.json yarn.lock
 	yarn install
 	touch node_modules
+
+clean:
+	rm -rf dist coverage node_modules test-results
