@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
@@ -55,7 +55,7 @@ jobs:
     steps:
       # Check out the code
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Find services with Node.js
       - name: Discover Node.js Services
@@ -80,7 +80,7 @@ jobs:
     steps:
       # Check out the code
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Set up Node.js environment
       - name: Set up Node.js
@@ -171,7 +171,7 @@ jobs:
     steps:
       # Check out the code
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Log in to GitHub Container Registry
       - name: Log in to GitHub Container Registry
