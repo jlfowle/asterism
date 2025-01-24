@@ -75,7 +75,7 @@ jobs:
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.inventory.outputs.services) }}
+        service: ${{ fromJson(needs.inventory.outputs.services).*.id }}
 
     steps:
       # Check out the code
@@ -85,31 +85,31 @@ jobs:
       # Set up Node.js environment
       - name: Set up Node.js
         uses: actions/setup-node@v4
-        if: contains(matrix.service.tools, 'node')
+        if: contains(needs.inventory.outputs.services[matrix.service.tools].tools, 'nodejs')
         with:
           node-version: '20'
 
       # Run tests
       - name: Run Tests
-        working-directory: services/${{ matrix.service.id }}
+        working-directory: services/${{ matrix.service }}
         run: make test
 
       # Lint the code
       - name: Lint Code
-        working-directory: services/${{ matrix.service.id }}
+        working-directory: services/${{ matrix.service }}
         run: make lint
 
       # Build the application
       - name: Build Application
-        working-directory: services/${{ matrix.service.id }}
+        working-directory: services/${{ matrix.service }}
         run: make build
 
       # Upload code coverage report
       - name: Upload Code Coverage Report
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.service.id }}-code-coverage
-          path: services/${{ matrix.service.id }}/coverage
+          name: ${{ matrix.service }}-code-coverage
+          path: services/${{ matrix.service }}/coverage
 
       # Upload test results
       - name: Upload Test Results
