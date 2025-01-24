@@ -6,7 +6,9 @@ on:
       - main
   pull_request: 
     types:
+      - opened
       - synchronize
+      - reopened
     branches:
       - main
 
@@ -186,7 +188,11 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
-          docker build -t $IMAGE_NAME:${{ needs.metadata.outputs.version }} .
+          docker build \
+            --build-arg VERSION=${{ needs.metadata.outputs.version }} \
+            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --build-arg COMMIT_SHA=${{ github.sha }} \
+            -t $IMAGE_NAME:${{ needs.metadata.outputs.version }} .
 
       # Push Docker image
       - name: Push Docker Image
