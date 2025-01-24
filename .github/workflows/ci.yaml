@@ -50,7 +50,7 @@ jobs:
     outputs:
       version: ${{ steps.set_output_version.outputs.version }}
 
-  discover-and-build:
+  inventory:
     name: Discover Services
     runs-on: ubuntu-24.04
 
@@ -68,14 +68,14 @@ jobs:
     outputs:
       services: ${{ steps.discover.outputs.services }}
 
-  build-and-test:
-    name: Build and Test Node.js Services
-    needs: discover-and-build
+  test-and-lint:
+    name: Test and Lint Services
+    needs: inventory
     runs-on: ubuntu-24.04
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.discover-and-build.outputs.services) }}
+        service: ${{ fromJson(needs.inventory.outputs.services) }}
 
     steps:
       # Check out the code
@@ -121,7 +121,7 @@ jobs:
 
   aggregate-test-summaries:
     name: Aggregate Test Summaries
-    needs: build-and-test
+    needs: test-and-lint
     runs-on: ubuntu-24.04
 
     steps:
@@ -160,14 +160,14 @@ jobs:
   docker-build:
     name: Build and Push Docker Images
     needs:
-      - build-and-test
-      - discover-and-build
+      - inventory
+      - test-and-lint
       - metadata
     runs-on: ubuntu-24.04
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.discover-and-build.outputs.services) }}
+        service: ${{ fromJson(needs.inventory.outputs.services) }}
 
     steps:
       # Check out the code
