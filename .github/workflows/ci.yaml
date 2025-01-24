@@ -1,4 +1,4 @@
-name: CI Pipeline for Node.js Services
+name: CI Pipeline for Services
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
       version: ${{ steps.set_output_version.outputs.version }}
 
   discover-and-build:
-    name: Discover and Build Node.js Services
+    name: Discover Services
     runs-on: ubuntu-24.04
 
     steps:
@@ -59,13 +59,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Find services with Node.js
-      - name: Discover Node.js Services
+      # Build service inventory
+      - name: Discover Services
         id: discover
         working-directory: services
-        run: |
-          services=$(find . -name package.json -not -path "*/node_modules/*" | xargs -n1 dirname | sed 's|^\./||' | paste -sd '"","')
-          echo "services=[\"$services\"]" >> $GITHUB_OUTPUT
+        run: echo services=$(./inventory.sh) >> $GITHUB_OUTPUT
     
     outputs:
       services: ${{ steps.discover.outputs.services }}
@@ -87,37 +85,38 @@ jobs:
       # Set up Node.js environment
       - name: Set up Node.js
         uses: actions/setup-node@v4
+        if: contains(matrix.service.tools, 'node')
         with:
           node-version: '20'
 
       # Run tests
       - name: Run Tests
-        working-directory: services/${{ matrix.service }}
+        working-directory: services/${{ matrix.service.id }}
         run: make test
 
       # Lint the code
       - name: Lint Code
-        working-directory: services/${{ matrix.service }}
+        working-directory: services/${{ matrix.service.id }}
         run: make lint
 
       # Build the application
       - name: Build Application
-        working-directory: services/${{ matrix.service }}
+        working-directory: services/${{ matrix.service.id }}
         run: make build
 
       # Upload code coverage report
       - name: Upload Code Coverage Report
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.service }}-code-coverage
-          path: services/${{ matrix.service }}/coverage
+          name: ${{ matrix.service.id }}-code-coverage
+          path: services/${{ matrix.service.id }}/coverage
 
       # Upload test results
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.service }}-test-results
-          path: services/${{ matrix.service }}/test-results/
+          name: ${{ matrix.service.id }}-test-results
+          path: services/${{ matrix.service.id }}/test-results/
       
 
   aggregate-test-summaries:
@@ -185,9 +184,9 @@ jobs:
 
       # Build Docker image
       - name: Build Docker Image
-        working-directory: services/${{ matrix.service }}
+        working-directory: services/${{ matrix.service.id }}
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service.id }}
           docker build \
             --build-arg VERSION=${{ needs.metadata.outputs.version }} \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
@@ -196,9 +195,9 @@ jobs:
 
       # Push Docker image
       - name: Push Docker Image
-        working-directory: services/${{ matrix.service }}
+        working-directory: services/${{ matrix.service.id }}
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service }}
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-${{ matrix.service.id }}
           docker push $IMAGE_NAME:${{ needs.metadata.outputs.version }}
 
   create-release:
