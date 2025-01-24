@@ -41,3 +41,12 @@ jobs:
         with:   
           header: pr-title-lint-error
           delete: true
+
+      - name: Enable auto-merge
+        if: success()
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          merge-method: squash
+    
