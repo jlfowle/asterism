@@ -8,8 +8,8 @@ on:
       - edited
 
 jobs:
-  enable-automerge:
-    runs-on: ubuntu-latest
+  validate-title:
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Validate PR title
@@ -42,6 +42,11 @@ jobs:
           header: pr-title-lint-error
           delete: true
 
+  enable-automerge:
+    runs-on: ubuntu-24.04
+    needs: validate-title
+
+    steps:
       - name: Enable auto-merge
         if: success()
         uses: peter-evans/enable-pull-request-automerge@v2
