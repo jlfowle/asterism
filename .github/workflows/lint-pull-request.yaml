@@ -13,7 +13,8 @@ on:
       - edited
 
 jobs:
-  validate-title:
+  validate-pr-title:
+    name: Validate PR title
     runs-on: ubuntu-24.04
 
     steps:
@@ -48,8 +49,8 @@ jobs:
           delete: true
 
   enable-automerge:
+    name: Enable auto-merge
     runs-on: ubuntu-24.04
-    needs: validate-title
 
     steps:
       - name: Enable auto-merge

@@ -50,7 +50,7 @@ jobs:
     outputs:
       version: ${{ steps.set_output_version.outputs.version }}
 
-  discover-and-build:
+  inventory:
     name: Discover Services
     runs-on: ubuntu-24.04
 
@@ -68,14 +68,14 @@ jobs:
     outputs:
       services: ${{ steps.discover.outputs.services }}
 
-  build-and-test:
-    name: Build and Test Node.js Services
-    needs: discover-and-build
+  test-and-lint:
+    name: Test and Lint Service
+    needs: inventory
     runs-on: ubuntu-24.04
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.discover-and-build.outputs.services) }}
+        service: ${{ fromJson(needs.inventory.outputs.services).*.id }}
 
     steps:
       # Check out the code
@@ -85,43 +85,43 @@ jobs:
       # Set up Node.js environment
       - name: Set up Node.js
         uses: actions/setup-node@v4
-        if: contains(matrix.service.tools, 'node')
+        if: contains(needs.inventory.outputs.services[matrix.service].tools, 'nodejs')
         with:
           node-version: '20'
 
       # Run tests
       - name: Run Tests
-        working-directory: services/${{ matrix.service.id }}
+        working-directory: services/${{ matrix.service }}
         run: make test
 
       # Lint the code
       - name: Lint Code
-        working-directory: services/${{ matrix.service.id }}
+        working-directory: services/${{ matrix.service }}
         run: make lint
 
       # Build the application
       - name: Build Application
-        working-directory: services/${{ matrix.service.id }}
+        working-directory: services/${{ matrix.service }}
         run: make build
 
       # Upload code coverage report
       - name: Upload Code Coverage Report
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.service.id }}-code-coverage
-          path: services/${{ matrix.service.id }}/coverage
+          name: ${{ matrix.service }}-code-coverage
+          path: services/${{ matrix.service }}/coverage
 
       # Upload test results
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.service.id }}-test-results
-          path: services/${{ matrix.service.id }}/test-results/
+          name: ${{ matrix.service }}-test-results
+          path: services/${{ matrix.service }}/test-results/
       
 
   aggregate-test-summaries:
     name: Aggregate Test Summaries
-    needs: build-and-test
+    needs: test-and-lint
     runs-on: ubuntu-24.04
 
     steps:
@@ -130,11 +130,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: '*-test-results'
-
-      - name: Display structure of downloaded files
-        run: |
-          ls -R *-test-results
-          cat *-test-results/junit.xml
 
       - name: Generate aggregated test summary
         uses: test-summary/action@v2
@@ -158,16 +153,16 @@ jobs:
           comment-tag: test-summary
 
   docker-build:
-    name: Build and Push Docker Images
+    name: Docker Image
     needs:
-      - build-and-test
-      - discover-and-build
+      - inventory
+      - test-and-lint
       - metadata
     runs-on: ubuntu-24.04
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.discover-and-build.outputs.services) }}
+        service: ${{ fromJson(needs.inventory.outputs.services).*.id }}
 
     steps:
       # Check out the code
@@ -184,9 +179,9 @@ jobs:
 
       # Build Docker image
       - name: Build Docker Image
-        working-directory: services/${{ matrix.service.id }}
+        working-directory: services/${{ matrix.service }}
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}-${{ matrix.service.id }}
+          IMAGE_NAME=ghcr.io/${{ github.repository }}-${{ matrix.service }}
           docker build \
             --build-arg VERSION=${{ needs.metadata.outputs.version }} \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
@@ -195,9 +190,9 @@ jobs:
 
       # Push Docker image
       - name: Push Docker Image
-        working-directory: services/${{ matrix.service.id }}
+        working-directory: services/${{ matrix.service }}
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}-${{ matrix.service.id }}
+          IMAGE_NAME=ghcr.io/${{ github.repository }}-${{ matrix.service }}
           docker push $IMAGE_NAME:${{ needs.metadata.outputs.version }}
 
   create-release:
