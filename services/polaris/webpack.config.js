@@ -7,7 +7,7 @@ module.exports = {
   mode: "development",
   output: {
     filename: "main.js",
-    publicPath: "http://localhost:3000/",
+    publicPath: "auto",
     path: path.resolve(__dirname, "dist"),
   },
   devServer: {

@@ -1,10 +1,10 @@
-name: CI Pipeline for Services
+name: CI and Release
 
 on:
   push:
     branches:
       - main
-  pull_request: 
+  pull_request:
     types:
       - opened
       - synchronize
@@ -16,201 +16,301 @@ permissions:
   contents: write
   packages: write
   pull-requests: write
+  id-token: write
+  attestations: write
+  security-events: write
 
 jobs:
   metadata:
-    name: Get Version
+    name: Resolve Version
     runs-on: ubuntu-24.04
-
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
     steps:
-      - name: Clone repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Get next version
-        id: get_next_version
+      - name: Compute next semantic version
+        id: next_version
         uses: thenativeweb/get-next-version@2.6.3
         with:
-          prefix: 'v'
-      
-      - name: Set output version
-        id: set_output_version
-        run: |
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            SHA=${{ github.sha }}
-            SHORT_SHA=${SHA::7}
-            VERSION=${{ steps.get_next_version.outputs.version }}-pr.${{ github.event.pull_request.number }}-commit.${SHORT_SHA}
-          else
-            VERSION=${{ steps.get_next_version.outputs.version }}
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          prefix: v
 
-    outputs:
-      version: ${{ steps.set_output_version.outputs.version }}
+      - name: Set build version
+        id: set_version
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            SHA="${{ github.sha }}"
+            SHORT_SHA="${SHA::7}"
+            VERSION="${{ steps.next_version.outputs.version }}-pr.${{ github.event.pull_request.number }}-commit.${SHORT_SHA}"
+          else
+            VERSION="${{ steps.next_version.outputs.version }}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
   inventory:
     name: Discover Services
     runs-on: ubuntu-24.04
-
-    steps:
-      # Check out the code
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      # Build service inventory
-      - name: Discover Services
-        id: discover
-        working-directory: services
-        run: echo services=$(./inventory.sh) >> $GITHUB_OUTPUT
-    
     outputs:
       services: ${{ steps.discover.outputs.services }}
+      containerized: ${{ steps.discover.outputs.containerized }}
+      kustomize_ready: ${{ steps.discover.outputs.kustomize_ready }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  test-and-lint:
-    name: Test and Lint Service
+      - name: Build service inventory
+        id: discover
+        working-directory: services
+        run: |
+          SERVICES=$(./inventory.sh)
+          CONTAINERIZED=$(jq -c '[ .[] | select(.containerized == true) ]' <<< "$SERVICES")
+          KUSTOMIZE_READY=$(jq -c '[ .[] | select(.has_kustomize_latest == true) ]' <<< "$SERVICES")
+
+          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+          echo "containerized=$CONTAINERIZED" >> "$GITHUB_OUTPUT"
+          echo "kustomize_ready=$KUSTOMIZE_READY" >> "$GITHUB_OUTPUT"
+
+  verify:
+    name: Verify ${{ matrix.service.id }}
     needs: inventory
     runs-on: ubuntu-24.04
-
     strategy:
+      fail-fast: false
       matrix:
-        service: ${{ fromJson(needs.inventory.outputs.services).*.id }}
-
+        service: ${{ fromJson(needs.inventory.outputs.services) }}
     steps:
-      # Check out the code
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # Set up Node.js environment
       - name: Set up Node.js
+        if: contains(toJson(matrix.service.tools), 'nodejs')
         uses: actions/setup-node@v4
-        if: contains(needs.inventory.outputs.services[matrix.service].tools, 'nodejs')
         with:
-          node-version: '20'
+          node-version: '22'
+          cache: yarn
+          cache-dependency-path: services/${{ matrix.service.id }}/yarn.lock
 
-      # Run tests
-      - name: Run Tests
-        working-directory: services/${{ matrix.service }}
+      - name: Set up Go
+        if: contains(toJson(matrix.service.tools), 'go')
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/${{ matrix.service.id }}/go.mod
+
+      - name: Run tests
+        working-directory: services/${{ matrix.service.id }}
         run: make test
 
-      # Lint the code
-      - name: Lint Code
-        working-directory: services/${{ matrix.service }}
+      - name: Run lint
+        working-directory: services/${{ matrix.service.id }}
         run: make lint
 
-      # Build the application
-      - name: Build Application
-        working-directory: services/${{ matrix.service }}
+      - name: Run build
+        working-directory: services/${{ matrix.service.id }}
         run: make build
 
-      # Upload code coverage report
-      - name: Upload Code Coverage Report
-        uses: actions/upload-artifact@v4
+      - name: Scan service source with Trivy
+        uses: aquasecurity/trivy-action@0.30.0
         with:
-          name: ${{ matrix.service }}-code-coverage
-          path: services/${{ matrix.service }}/coverage
+          scan-type: fs
+          scan-ref: services/${{ matrix.service.id }}
+          format: sarif
+          output: trivy-${{ matrix.service.id }}.sarif
 
-      # Upload test results
-      - name: Upload Test Results
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.service }}-test-results
-          path: services/${{ matrix.service }}/test-results/
-      
-
-  aggregate-test-summaries:
-    name: Aggregate Test Summaries
-    needs: test-and-lint
-    runs-on: ubuntu-24.04
-
-    steps:
-
-      - name: Download all test summaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: '*-test-results'
-
-      - name: Generate aggregated test summary
-        uses: test-summary/action@v2
-        with:
-          paths: '*-test-results/junit.xml'
-          output: 'test-summary.md'
+      - name: Upload Trivy results to GitHub Security
         if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.service.id }}.sarif
 
-      # Upload test results
-      - name: Upload Test Results
+      - name: Upload coverage artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-summary.md
-          path: test-summary.md
+          name: coverage-${{ matrix.service.id }}
+          path: |
+            services/${{ matrix.service.id }}/coverage
+            services/${{ matrix.service.id }}/coverage.out
+            services/${{ matrix.service.id }}/coverage.xml
 
-      - name: Comment PR with aggregated test summary
-        uses: thollander/actions-comment-pull-request@v3
-        if: github.event_name == 'pull_request'
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          file-path: 'test-summary.md'
-          comment-tag: test-summary
+          name: test-results-${{ matrix.service.id }}
+          path: |
+            services/${{ matrix.service.id }}/test-results
+            services/${{ matrix.service.id }}/test-results.json
 
-  docker-build:
-    name: Docker Image
+  containers:
+    name: Build Container ${{ matrix.service.id }}
     needs:
-      - inventory
-      - test-and-lint
       - metadata
+      - inventory
+      - verify
     runs-on: ubuntu-24.04
-
     strategy:
+      fail-fast: false
       matrix:
-        service: ${{ fromJson(needs.inventory.outputs.services).*.id }}
-
+        service: ${{ fromJson(needs.inventory.outputs.containerized) }}
     steps:
-      # Check out the code
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # Log in to GitHub Container Registry
-      - name: Log in to GitHub Container Registry
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build Docker image
-      - name: Build Docker Image
-        working-directory: services/${{ matrix.service }}
-        run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}-${{ matrix.service }}
-          docker build \
-            --build-arg VERSION=${{ needs.metadata.outputs.version }} \
-            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
-            --build-arg COMMIT_SHA=${{ github.sha }} \
-            -t $IMAGE_NAME:${{ needs.metadata.outputs.version }} .
+      - name: Build and optionally push image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: services/${{ matrix.service.id }}
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ghcr.io/${{ github.repository }}-${{ matrix.service.id }}:${{ needs.metadata.outputs.version }}
+            ghcr.io/${{ github.repository }}-${{ matrix.service.id }}:latest
+          build-args: |
+            VERSION=${{ needs.metadata.outputs.version }}
+            BUILD_DATE=${{ github.event.head_commit.timestamp || github.run_id }}
+            COMMIT_SHA=${{ github.sha }}
 
-      # Push Docker image
-      - name: Push Docker Image
-        working-directory: services/${{ matrix.service }}
-        run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}-${{ matrix.service }}
-          docker push $IMAGE_NAME:${{ needs.metadata.outputs.version }}
+      - name: Install Cosign
+        if: github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@v3.8.1
 
-  create-release:
-    name: Create GitHub Release
+      - name: Sign image with keyless Cosign
+        if: github.ref == 'refs/heads/main'
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: |
+          cosign sign --yes ghcr.io/${{ github.repository }}-${{ matrix.service.id }}@${{ steps.build.outputs.digest }}
+
+      - name: Generate SPDX SBOM
+        if: github.ref == 'refs/heads/main'
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ github.repository }}-${{ matrix.service.id }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.service.id }}.spdx.json
+
+      - name: Attest build provenance
+        if: github.ref == 'refs/heads/main'
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: ghcr.io/${{ github.repository }}-${{ matrix.service.id }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Write image metadata
+        if: github.ref == 'refs/heads/main'
+        run: |
+          jq -n \
+            --arg service "${{ matrix.service.id }}" \
+            --arg image "ghcr.io/${{ github.repository }}-${{ matrix.service.id }}" \
+            --arg digest "${{ steps.build.outputs.digest }}" \
+            --arg version "${{ needs.metadata.outputs.version }}" \
+            '{service: $service, image: $image, digest: $digest, version: $version}' \
+            > image-metadata-${{ matrix.service.id }}.json
+
+      - name: Upload supply chain artifacts
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: supply-chain-${{ matrix.service.id }}
+          path: |
+            sbom-${{ matrix.service.id }}.spdx.json
+            image-metadata-${{ matrix.service.id }}.json
+
+  render-kustomize:
+    name: Render Kustomize ${{ matrix.service.id }}
     needs:
-      - docker-build
+      - inventory
+      - verify
+    runs-on: ubuntu-24.04
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.inventory.outputs.kustomize_ready) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Render latest overlay
+        run: |
+          mkdir -p rendered
+          kustomize build deploy/${{ matrix.service.id }}/latest > rendered/${{ matrix.service.id }}-latest.yaml
+
+      - name: Upload rendered manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-${{ matrix.service.id }}
+          path: rendered/${{ matrix.service.id }}-latest.yaml
+
+  release:
+    name: Publish GitHub Release
+    needs:
       - metadata
+      - inventory
+      - containers
+      - render-kustomize
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-
     steps:
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download supply-chain artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: supply-chain-*
+          merge-multiple: true
+
+      - name: Download rendered manifests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rendered-*
+          merge-multiple: true
+
+      - name: Build release manifest
+        run: |
+          jq -n \
+            --arg version "${{ needs.metadata.outputs.version }}" \
+            --arg commit "${{ github.sha }}" \
+            --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{version: $version, commit: $commit, created: $created, services: []}' > release-manifest.json
+
+          for f in image-metadata-*.json; do
+            [ -f "$f" ] || continue
+            release_service=$(cat "$f")
+            release_manifest_tmp=$(mktemp)
+            jq --argjson svc "$release_service" '.services += [$svc]' release-manifest.json > "$release_manifest_tmp"
+            mv "$release_manifest_tmp" release-manifest.json
+          done
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.metadata.outputs.version }}
-          release_name: ${{ needs.metadata.outputs.version }}
+          name: ${{ needs.metadata.outputs.version }}
           draft: false
-          prerelease: true
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release-manifest.json
+            *-latest.yaml
+            sbom-*.spdx.json
+            image-metadata-*.json

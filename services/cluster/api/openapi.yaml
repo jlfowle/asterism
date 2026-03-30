@@ -1,0 +1,63 @@
+openapi: 3.1.0
+info:
+  title: cluster service API
+  version: 0.1.0
+servers:
+  - url: https://api.example.internal/cluster
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+paths:
+  /healthz:
+    get:
+      summary: Liveness endpoint
+      responses:
+        '200':
+          description: Service is alive
+  /api/v1/status:
+    get:
+      summary: Return current integration status
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current status response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  status:
+                    type: string
+                  principal:
+                    type: string
+                  integration:
+                    type: object
+                    properties:
+                      configured:
+                        type: boolean
+                      reachable:
+                        type: boolean
+                      endpoint:
+                        type: string
+                      message:
+                        type: string
+                      httpStatus:
+                        type: integer
+                      latencyMs:
+                        type: integer
+                      metrics:
+                        type: object
+                        additionalProperties: true
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          description: Missing identity context
+        '403':
+          description: Authenticated but not authorized

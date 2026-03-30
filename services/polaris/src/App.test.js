@@ -4,7 +4,8 @@ import App from "./App";
 
 test("renders the dashboard layout", () => {
   const { getByText } = render(<App />);
-  expect(getByText("Polaris Dashboard")).toBeInTheDocument();
+  expect(getByText("Polaris Mission Console")).toBeInTheDocument();
   expect(getByText("Dashboard")).toBeInTheDocument();
-  expect(getByText("Welcome to Polaris")).toBeInTheDocument();
+  expect(getByText("Operational Dashboard")).toBeInTheDocument();
+  expect(getByText("UniFi")).toBeInTheDocument();
 });

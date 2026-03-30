@@ -1,11 +1,35 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/"
+    directory: "/services/polaris"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/services/unifi"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/services/cluster"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/services/pfsense"
     schedule:
       interval: "weekly"
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/services/polaris"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/services/unifi"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/services/cluster"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/services/pfsense"
     schedule:
       interval: "weekly"
   - package-ecosystem: "github-actions"

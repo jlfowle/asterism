@@ -1,0 +1,33 @@
+asyncapi: 3.0.0
+info:
+  title: unifi events API
+  version: 0.1.0
+channels:
+  unifi.status.updated:
+    address: unifi.status.updated
+    messages:
+      statusUpdated:
+        $ref: '#/components/messages/StatusUpdated'
+operations:
+  publishStatusUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/unifi.status.updated'
+    messages:
+      - $ref: '#/channels/unifi.status.updated/messages/statusUpdated'
+components:
+  messages:
+    StatusUpdated:
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+          source:
+            type: string
+          timestamp:
+            type: string
+            format: date-time
+          payload:
+            type: object
+            additionalProperties: true
