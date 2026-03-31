@@ -28,7 +28,7 @@ jobs:
       version: ${{ steps.set_version.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -59,7 +59,7 @@ jobs:
       kustomize_ready: ${{ steps.discover.outputs.kustomize_ready }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build service inventory
         id: discover
@@ -83,7 +83,7 @@ jobs:
         service: ${{ fromJson(needs.inventory.outputs.services) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
         if: contains(toJson(matrix.service.tools), 'nodejs')
@@ -157,7 +157,7 @@ jobs:
         service: ${{ fromJson(needs.inventory.outputs.containerized) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -244,7 +244,7 @@ jobs:
         service: ${{ fromJson(needs.inventory.outputs.kustomize_ready) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Kustomize
         uses: imranismail/setup-kustomize@v2
@@ -271,7 +271,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download supply-chain artifacts
         uses: actions/download-artifact@v4
