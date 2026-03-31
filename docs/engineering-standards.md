@@ -55,6 +55,7 @@ These standards apply to both human contributors and AI agents working in Asteri
 ## 8. CI Expectations
 - CI is implemented in GitHub Actions.
 - Pull requests must at minimum build, lint, and test the changed services.
+- Pull request automation should expose a single aggregate merge-readiness check that is suitable for branch protection as the only required validation gate.
 - CI should reflect the standards of a security-focused and compliance-focused enterprise.
 - Security scanning, artifact integrity, provenance, SBOM generation, and auditable release outputs are preferred defaults rather than optional extras.
 - Changes that reduce traceability, weaken controls, or bypass validation should be treated as regressions.
