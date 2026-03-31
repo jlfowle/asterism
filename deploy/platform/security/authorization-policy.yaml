@@ -1,0 +1,19 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: asterism-default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: asterism
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            requestPrincipals:
+              - '*'
+      to:
+        - operation:
+            paths:
+              - /healthz
+              - /api/*

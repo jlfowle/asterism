@@ -1,13 +1,20 @@
 import React from "react";
 
 const Sidebar = () => (
-  <div className="sidebar">
+  <aside className="sidebar">
+    <p className="sidebar-heading">Navigation</p>
     <ul>
       <li><a href="#dashboard">Dashboard</a></li>
-      <li><a href="#settings">Settings</a></li>
-      <li><a href="#about">About</a></li>
+      <li><a href="#integrations">Integrations</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#events">Events</a></li>
     </ul>
-  </div>
+    <div className="sidebar-footnote">
+      External identity: Cognito OIDC
+      <br />
+      In-cluster trust: Service Mesh mTLS
+    </div>
+  </aside>
 );
 
 export default Sidebar;

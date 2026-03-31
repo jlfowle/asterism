@@ -1,0 +1,13 @@
+{
+  "service": "cluster",
+  "version": "0.1.0",
+  "displayName": "Cluster Integration",
+  "apiBasePath": "/api/services/cluster",
+  "dashboardCard": {
+    "title": "Cluster Status",
+    "description": "Runtime-loaded card owned by the cluster service.",
+    "statusEndpoint": "/api/v1/status",
+    "module": "/ui/dashboard-card.js",
+    "export": "createDashboardCard"
+  }
+}

@@ -1,0 +1,199 @@
+name: PR Merge Readiness
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - ready_for_review
+    branches:
+      - main
+
+permissions:
+  checks: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  merge-readiness:
+    name: PR Merge Readiness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPOSITORY: ${{ github.repository }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve required checks
+        id: required_checks
+        working-directory: services
+        run: |
+          SERVICES=$(./inventory.sh)
+          REQUIRED_CHECKS=$(jq -cn \
+            --argjson services "$SERVICES" \
+            '[ "Resolve Version", "Discover Services", "Validate PR title" ]
+            + ($services | map("Verify " + .id))
+            + ($services | map(select(.containerized == true) | "Build Container " + .id))')
+
+          echo "checks=${REQUIRED_CHECKS}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for pull request validation checks
+        env:
+          REQUIRED_CHECKS: ${{ steps.required_checks.outputs.checks }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import sys
+          import time
+          import urllib.request
+
+          repository = os.environ["REPOSITORY"]
+          head_sha = os.environ["HEAD_SHA"]
+          github_token = os.environ["GITHUB_TOKEN"]
+          required_checks = json.loads(os.environ["REQUIRED_CHECKS"])
+          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
+
+          request_headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {github_token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+          }
+
+          poll_interval_seconds = 15
+          deadline = time.time() + (18 * 60)
+
+          def fetch_check_runs():
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repository}/commits/{head_sha}/check-runs?per_page=100",
+                  headers=request_headers,
+              )
+              with urllib.request.urlopen(request) as response:
+                  payload = json.load(response)
+              return payload["check_runs"]
+
+          def latest_check_run(check_runs, check_name):
+              matches = [run for run in check_runs if run["name"] == check_name]
+              if not matches:
+                  return None
+
+              matches.sort(
+                  key=lambda run: (
+                      run.get("started_at") or "",
+                      run.get("completed_at") or "",
+                      run.get("id") or 0,
+                  ),
+                  reverse=True,
+              )
+              return matches[0]
+
+          def classify(run):
+              if run is None:
+                  return "missing"
+              if run["status"] != "completed":
+                  return "pending"
+              if run["conclusion"] == "success":
+                  return "success"
+              return "failed"
+
+          def format_markdown_table(rows):
+              lines = [
+                  "| Check | Status | Conclusion |",
+                  "| --- | --- | --- |",
+              ]
+              for row in rows:
+                  lines.append(
+                      f"| {row['name']} | {row['status']} | {row['conclusion']} |"
+                  )
+              return "\n".join(lines)
+
+          last_snapshot = []
+
+          while True:
+              check_runs = fetch_check_runs()
+              snapshot = []
+              missing = []
+              pending = []
+              failed = []
+
+              for check_name in required_checks:
+                  run = latest_check_run(check_runs, check_name)
+                  state = classify(run)
+                  status = "missing" if run is None else run["status"]
+                  conclusion = "missing" if run is None else str(run.get("conclusion"))
+                  html_url = "" if run is None else run.get("html_url", "")
+
+                  snapshot.append(
+                      {
+                          "name": check_name,
+                          "status": status,
+                          "conclusion": conclusion,
+                          "url": html_url,
+                      }
+                  )
+
+                  if state == "missing":
+                      missing.append(check_name)
+                  elif state == "pending":
+                      pending.append(check_name)
+                  elif state == "failed":
+                      failed.append(
+                          {
+                              "name": check_name,
+                              "conclusion": run.get("conclusion"),
+                              "url": html_url,
+                          }
+                      )
+
+              last_snapshot = snapshot
+
+              if not missing and not pending:
+                  with open(summary_path, "w", encoding="utf-8") as summary:
+                      summary.write("## Pull Request Validation\n\n")
+                      summary.write(format_markdown_table(snapshot))
+                      summary.write("\n")
+
+                  if failed:
+                      print("One or more required checks failed:", file=sys.stderr)
+                      for item in failed:
+                          print(
+                              f"- {item['name']}: {item['conclusion']} {item['url']}",
+                              file=sys.stderr,
+                          )
+                      sys.exit(1)
+
+                  print("All required pull request validation checks passed.")
+                  sys.exit(0)
+
+              if time.time() >= deadline:
+                  with open(summary_path, "w", encoding="utf-8") as summary:
+                      summary.write("## Pull Request Validation\n\n")
+                      summary.write("Timed out while waiting for required checks.\n\n")
+                      summary.write(format_markdown_table(snapshot))
+                      summary.write("\n")
+
+                  if missing:
+                      print(
+                          "Timed out waiting for these checks to appear:",
+                          ", ".join(missing),
+                          file=sys.stderr,
+                      )
+                  if pending:
+                      print(
+                          "Timed out waiting for these checks to complete:",
+                          ", ".join(pending),
+                          file=sys.stderr,
+                      )
+                  sys.exit(1)
+
+              print(
+                  "Waiting for required checks:",
+                  ", ".join(missing + pending),
+              )
+              time.sleep(poll_interval_seconds)
+          PY

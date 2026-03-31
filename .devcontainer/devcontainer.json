@@ -1,0 +1,36 @@
+{
+  "name": "asterism",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/workspaces/asterism",
+  "remoteUser": "node",
+  "forwardPorts": [3000, 8080, 8081, 8082, 8083],
+  "postCreateCommand": "cd services/polaris && yarn install && cd /workspaces/asterism && find services -mindepth 2 -maxdepth 2 -name go.mod -print0 | xargs -0 -I{} sh -c 'cd \"$(dirname \"{}\")\" && go mod download'",
+  "remoteEnv": {
+    "CGO_ENABLED": "0"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "golang.go",
+        "redhat.vscode-yaml",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "openai.chatgpt"
+      ],
+      "settings": {
+        "go.useLanguageServer": true,
+        "go.toolsManagement.autoUpdate": true,
+        "eslint.workingDirectories": [
+          {
+            "directory": "services/polaris",
+            "changeProcessCWD": true
+          }
+        ]
+      }
+    }
+  }
+}

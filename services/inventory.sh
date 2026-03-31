@@ -1,13 +1,23 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 SERVICES='[]'
 
 uses_nodejs() {
-  if [ -f "${1}/package.json" ]; then
-    return 0
-  else
-    return 1
-  fi
+  [ -f "${1}/package.json" ]
+}
+
+uses_golang() {
+  [ -f "${1}/go.mod" ]
+}
+
+has_dockerfile() {
+  [ -f "${1}/Dockerfile" ]
+}
+
+has_kustomize_overlay() {
+  [ -f "../deploy/${1}/latest/kustomization.yaml" ]
 }
 
 for service in *; do
@@ -15,13 +25,28 @@ for service in *; do
     continue
   fi
 
-  SERVICE='{"id":"'${service}'","tools":[]}'
-  
-  if uses_nodejs $service; then
-    SERVICE=$(jq -c '.tools += ["nodejs"]' <<< $SERVICE)
+  SERVICE=$(jq -nc \
+    --arg id "${service}" \
+    --arg path "services/${service}" \
+    '{"id":$id,"path":$path,"tools":[],"containerized":false,"has_kustomize_latest":false}')
+
+  if uses_nodejs "${service}"; then
+    SERVICE=$(jq -c '.tools += ["nodejs"]' <<< "${SERVICE}")
   fi
 
-  SERVICES=$(jq -c '. += ['${SERVICE}']' <<< $SERVICES)
+  if uses_golang "${service}"; then
+    SERVICE=$(jq -c '.tools += ["go"]' <<< "${SERVICE}")
+  fi
+
+  if has_dockerfile "${service}"; then
+    SERVICE=$(jq -c '.containerized = true' <<< "${SERVICE}")
+  fi
+
+  if has_kustomize_overlay "${service}"; then
+    SERVICE=$(jq -c '.has_kustomize_latest = true' <<< "${SERVICE}")
+  fi
+
+  SERVICES=$(jq -c --argjson service "${SERVICE}" '. += [$service]' <<< "${SERVICES}")
 done
 
-echo $SERVICES
+echo "${SERVICES}"

@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM node:18 AS build
+FROM node:22-bookworm AS build
 
 # Set the working directory
 WORKDIR /usr/src/app
@@ -17,7 +17,7 @@ COPY . .
 RUN yarn build
 
 # Stage 2: Serve the application with Nginx
-FROM nginx:alpine
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 
 # Define build arguments
 ARG VERSION
@@ -45,7 +45,7 @@ LABEL org.opencontainers.image.vendor="Asterism Project"
 LABEL org.opencontainers.image.ref.name="${VERSION}"
 
 # Expose the port Nginx runs on
-EXPOSE 80
+EXPOSE 8080
 
 # Command to run Nginx
 CMD ["nginx", "-g", "daemon off;"]

@@ -34,3 +34,5 @@ pids
 # Standard folders
 coverage/
 test-results/
+coverage.out
+.codex
