@@ -186,7 +186,7 @@ jobs:
 
       - name: Install Cosign
         if: github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@v3.8.1
+        uses: sigstore/cosign-installer@v4.1.1
 
       - name: Sign image with keyless Cosign
         if: github.ref == 'refs/heads/main'
