@@ -18,13 +18,37 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Bypass title validation for Dependabot
+      - name: Normalize Dependabot PR title to Conventional Commits
         if: github.event.pull_request.user.login == 'dependabot[bot]'
-        run: echo "Dependabot pull request titles are generated automatically and are exempt from semantic title linting."
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const currentTitle = context.payload.pull_request.title.trim();
+            const conventionalCommitPattern =
+              /^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?!?:\s.+/i;
+
+            if (conventionalCommitPattern.test(currentTitle)) {
+              core.info("Dependabot title already matches Conventional Commits format.");
+              return;
+            }
+
+            const normalizedTitleBody =
+              currentTitle.charAt(0).toLowerCase() + currentTitle.slice(1);
+            const updatedTitle = `chore(deps): ${normalizedTitleBody}`;
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              title: updatedTitle,
+            });
+
+            core.info(`Updated Dependabot PR title to: ${updatedTitle}`);
 
       - name: Validate PR title
         id: lint_pr_title
-        if: github.event.pull_request.user.login != 'dependabot[bot]'
         uses: amannn/action-semantic-pull-request@v4
         with:
           validateSingleCommit: true
@@ -65,4 +89,3 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ github.event.pull_request.number }}
           merge-method: squash
-    
