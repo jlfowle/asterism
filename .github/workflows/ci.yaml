@@ -215,7 +215,7 @@ jobs:
 
       - name: Attest build provenance
         if: github.ref == 'refs/heads/main'
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ghcr.io/${{ github.repository }}-${{ matrix.service.id }}
           subject-digest: ${{ steps.build.outputs.digest }}
