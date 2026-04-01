@@ -97,7 +97,7 @@ jobs:
 
       - name: Set up Node.js
         if: contains(toJson(matrix.service.tools), 'nodejs')
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: yarn
