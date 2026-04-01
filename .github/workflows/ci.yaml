@@ -47,6 +47,16 @@ jobs:
             VERSION="${{ steps.next_version.outputs.version }}-pr.${{ github.event.pull_request.number }}-commit.${SHORT_SHA}"
           else
             VERSION="${{ steps.next_version.outputs.version }}"
+
+            # Ensure every push to main yields a unique release version even when
+            # commit types do not trigger a semantic bump (for example build/chore).
+            LATEST_TAG=$(git tag --list "v*" --sort=-version:refname | head -n 1 || true)
+            if [[ -n "${LATEST_TAG}" && "${VERSION}" == "${LATEST_TAG}" ]]; then
+              BASE="${LATEST_TAG#v}"
+              IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE}"
+              PATCH=$((PATCH + 1))
+              VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+            fi
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 

@@ -78,3 +78,14 @@ These standards apply to both human contributors and AI agents working in Asteri
 - If a choice affects integration, prefer explicit API contracts over implicit coupling.
 - If a choice affects runtime secrets, use External Secrets Operator with AWS Secrets Manager.
 - If a choice affects internal trust, assume service mesh mTLS and mesh policy are the baseline.
+
+## 12. Validation Integrity
+- Required validation gates must remain enforced for all contributors, including automation and bots.
+- Do not bypass, disable, or weaken checks as a workaround for failing automation.
+- When automation (for example Dependabot) cannot satisfy a validation, fix the underlying workflow or automation behavior so policy remains intact.
+- Any intentional reduction in validation enforcement requires explicit approval from the repository owner and should be documented in-repo with rationale.
+
+## 13. Decision Governance
+- Major decisions (architecture, security posture, deployment model, branch protection, required checks, and policy gate changes) require explicit user or maintainer direction.
+- Contributors and AI agents should present tradeoffs and recommendations, then pause for approval before implementing major policy shifts.
+- If there is uncertainty about whether a change is a major decision, treat it as major and escalate.
