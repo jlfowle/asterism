@@ -3,8 +3,41 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2.5.7": {
+      "installZsh": false,
+      "installOhMyZsh": false,
+      "installOhMyZshConfig": false,
+      "upgradePackages": false,
+      "username": "vscode"
+    },
+    "ghcr.io/devcontainers/features/git:1.3.5": {
+      "version": "os-provided",
+      "ppa": false
+    },
+    "ghcr.io/devcontainers/features/node:1.7.1": {
+      "version": "22",
+      "pnpmVersion": "none",
+      "installYarnUsingApt": false
+    },
+    "ghcr.io/devcontainers/features/go:1.3.3": {
+      "version": "1.23.8"
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1.3.1": {
+      "version": "1.32",
+      "helm": "none",
+      "minikube": "none"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1.1.0": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1.9.1": {
+      "version": "latest",
+      "moby": true,
+      "dockerDashComposeVersion": "v2",
+      "installDockerComposeSwitch": true
+    }
+  },
   "workspaceFolder": "/workspaces/asterism",
-  "remoteUser": "node",
+  "remoteUser": "vscode",
   "forwardPorts": [3000, 8080, 8081, 8082, 8083],
   "postCreateCommand": "cd services/polaris && yarn install && cd /workspaces/asterism && find services -mindepth 2 -maxdepth 2 -name go.mod -print0 | xargs -0 -I{} sh -c 'cd \"$(dirname \"{}\")\" && go mod download'",
   "remoteEnv": {

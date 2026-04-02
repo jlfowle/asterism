@@ -33,6 +33,17 @@ This file is the fast-start guidance for any AI agent or contributor working in 
 - The only deployed environment is driven from `main`.
 - Deployment consumes `latest` tags from successful `main` builds, while releases should still preserve traceability metadata.
 
+## Agent Decision Governance
+- Do not make major architectural, security, deployment, branch-protection, or validation-policy decisions unilaterally.
+- For decisions with non-obvious tradeoffs, present options, risks, and a recommendation, then wait for user direction before proceeding.
+- If a decision changes enforcement level (for example, required checks or policy gates), explicit user approval is required.
+
+## Validation And Automation Rules
+- Do not bypass, disable, or weaken validation gates to make a failing workflow pass.
+- Do not exempt specific actors (including `dependabot[bot]`) from required validation checks unless the user explicitly approves that policy change.
+- Fix root causes in code or automation so all contributors and bots can satisfy the same standards.
+- Treat reductions in auditability, traceability, or policy enforcement as regressions.
+
 ## Working Norms
 - Favor declarative configuration over manual cluster mutation.
 - Keep services independently buildable and testable.
