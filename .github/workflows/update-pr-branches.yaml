@@ -1,0 +1,97 @@
+name: Update PR Branches
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-pr-branches
+  cancel-in-progress: true
+
+jobs:
+  update-pr-branches:
+    name: Update Open PR Branches
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Update open pull request branches targeting main
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const baseBranch = 'main';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const summary = [];
+
+            const pullRequests = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              base: baseBranch,
+              per_page: 100,
+            });
+
+            core.info(`Found ${pullRequests.length} open pull request(s) targeting ${baseBranch}.`);
+
+            for (const pullRequest of pullRequests) {
+              const label = `#${pullRequest.number} ${pullRequest.title}`;
+
+              try {
+                const response = await github.rest.pulls.updateBranch({
+                  owner,
+                  repo,
+                  pull_number: pullRequest.number,
+                  expected_head_sha: pullRequest.head.sha,
+                });
+
+                const message = response.status === 202
+                  ? 'update requested'
+                  : `unexpected status ${response.status}`;
+
+                core.info(`${label}: ${message}.`);
+                summary.push(`- ${label}: ${message}`);
+              } catch (error) {
+                const status = error.status ?? 'unknown';
+                const message = error.response?.data?.message ?? error.message;
+                const normalizedMessage = String(message).toLowerCase();
+
+                if (
+                  status === 422 &&
+                  (normalizedMessage.includes('not behind') ||
+                    normalizedMessage.includes('update is not needed') ||
+                    normalizedMessage.includes('head branch is not behind'))
+                ) {
+                  core.info(`${label}: already up to date.`);
+                  summary.push(`- ${label}: already up to date`);
+                  continue;
+                }
+
+                if (
+                  status === 422 &&
+                  (normalizedMessage.includes('merge conflict') ||
+                    normalizedMessage.includes('conflict'))
+                ) {
+                  core.warning(`${label}: cannot be updated automatically due to merge conflicts.`);
+                  summary.push(`- ${label}: blocked by merge conflicts`);
+                  continue;
+                }
+
+                core.warning(`${label}: failed to update (${status}): ${message}`);
+                summary.push(`- ${label}: failed to update (${status}) - ${message}`);
+              }
+            }
+
+            if (summary.length === 0) {
+              summary.push('- No open pull requests targeting main.');
+            }
+
+            await core.summary
+              .addHeading('PR Branch Update Results')
+              .addRaw(summary.join('\n'))
+              .write();
