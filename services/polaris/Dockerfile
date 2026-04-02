@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM node:22-bookworm AS build
+FROM node:25-bookworm AS build
 
 # Set the working directory
 WORKDIR /usr/src/app
