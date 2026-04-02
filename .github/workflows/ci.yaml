@@ -28,7 +28,7 @@ jobs:
       version: ${{ steps.set_version.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -69,7 +69,7 @@ jobs:
       kustomize_ready: ${{ steps.discover.outputs.kustomize_ready }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build service inventory
         id: discover
@@ -93,11 +93,11 @@ jobs:
         service: ${{ fromJson(needs.inventory.outputs.services) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
         if: contains(toJson(matrix.service.tools), 'nodejs')
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: yarn
@@ -105,7 +105,7 @@ jobs:
 
       - name: Set up Go
         if: contains(toJson(matrix.service.tools), 'go')
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: services/${{ matrix.service.id }}/go.mod
 
@@ -131,7 +131,7 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-${{ matrix.service.id }}.sarif
 
@@ -167,7 +167,7 @@ jobs:
         service: ${{ fromJson(needs.inventory.outputs.containerized) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -196,7 +196,7 @@ jobs:
 
       - name: Install Cosign
         if: github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@v3.8.1
+        uses: sigstore/cosign-installer@v4.1.1
 
       - name: Sign image with keyless Cosign
         if: github.ref == 'refs/heads/main'
@@ -215,7 +215,7 @@ jobs:
 
       - name: Attest build provenance
         if: github.ref == 'refs/heads/main'
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ghcr.io/${{ github.repository }}-${{ matrix.service.id }}
           subject-digest: ${{ steps.build.outputs.digest }}
@@ -254,7 +254,7 @@ jobs:
         service: ${{ fromJson(needs.inventory.outputs.kustomize_ready) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Kustomize
         uses: imranismail/setup-kustomize@v2
@@ -281,16 +281,16 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download supply-chain artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: supply-chain-*
           merge-multiple: true
 
       - name: Download rendered manifests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: rendered-*
           merge-multiple: true
