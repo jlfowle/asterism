@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM node:22-bookworm AS build
+FROM node:25-bookworm AS build
 
 # Set the working directory
 WORKDIR /usr/src/app
@@ -17,7 +17,7 @@ COPY . .
 RUN yarn build
 
 # Stage 2: Serve the application with Nginx
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.29-alpine
 
 # Define build arguments
 ARG VERSION
