@@ -182,7 +182,7 @@ jobs:
 
       - name: Build and optionally push image
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: services/${{ matrix.service.id }}
           push: ${{ github.ref == 'refs/heads/main' }}
