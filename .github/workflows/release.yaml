@@ -1,0 +1,198 @@
+name: Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: read
+  id-token: write
+  actions: read
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPOSITORY: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      MERGE_COMMIT_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+      SOURCE_CI_WORKFLOW_FILE: 'ci.yaml'
+      COSIGN_EXPERIMENTAL: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Compute release version
+        id: version
+        uses: thenativeweb/get-next-version@2.6.3
+        with:
+          prefix: v
+
+      - name: Set release version
+        id: set_version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          LATEST_TAG=$(git tag --list "v*" --sort=-version:refname | head -n 1 || true)
+          if [[ -n "${LATEST_TAG}" && "${VERSION}" == "${LATEST_TAG}" ]]; then
+            BASE="${LATEST_TAG#v}"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE}"
+            PATCH=$((PATCH + 1))
+            VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      # Reuse the successful PR workflow run so the release stays tied to the reviewed build.
+      - name: Locate source CI run
+        id: source_run
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.request
+
+          repo = os.environ['REPOSITORY']
+          pr_number = int(os.environ['PR_NUMBER'])
+          workflow_file = os.environ['SOURCE_CI_WORKFLOW_FILE']
+          token = os.environ['GITHUB_TOKEN']
+
+          headers = {
+              'Accept': 'application/vnd.github+json',
+              'Authorization': f'Bearer {token}',
+              'X-GitHub-Api-Version': '2022-11-28',
+          }
+
+          page = 1
+          while True:
+              url = (
+                  f'https://api.github.com/repos/{repo}/actions/workflows/{workflow_file}/runs'
+                  f'?event=pull_request&status=success&per_page=100&page={page}'
+              )
+              request = urllib.request.Request(url, headers=headers)
+              with urllib.request.urlopen(request) as response:
+                  payload = json.load(response)
+
+              runs = payload.get('workflow_runs', [])
+              if not runs:
+                  break
+
+              for run in runs:
+                  if run.get('conclusion') != 'success':
+                      continue
+                  if any(pr.get('number') == pr_number for pr in run.get('pull_requests', [])):
+                      with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+                          output.write(f"run_id={run['id']}\n")
+                          output.write(f"run_url={run['html_url']}\n")
+                      sys.exit(0)
+
+              if len(runs) < 100:
+                  break
+              page += 1
+
+          print(f'Could not find a successful CI run for PR #{pr_number}', file=sys.stderr)
+          sys.exit(1)
+          PY
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.source_run.outputs.run_id }}
+          pattern: build-*
+          merge-multiple: true
+          path: artifacts/build
+
+      - name: Download rendered manifests
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.source_run.outputs.run_id }}
+          pattern: rendered-*
+          merge-multiple: true
+          path: artifacts/rendered
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.1.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Auxiliary release metadata is assembled here because it does not change the shipped bits.
+      - name: Publish images and record release metadata
+        run: |
+          mkdir -p artifacts/release
+          shopt -s nullglob
+          for metadata in artifacts/build/image-metadata-*.json; do
+            service=$(jq -r '.service' "$metadata")
+            image=$(jq -r '.image' "$metadata")
+            tag=$(jq -r '.tag' "$metadata")
+            archive="artifacts/build/image-${service}.tar"
+            release_tag="${{ steps.set_version.outputs.version }}"
+
+            if [[ ! -f "$archive" ]]; then
+              echo "Missing image archive for ${service}: ${archive}" >&2
+              exit 1
+            fi
+
+            docker load -i "$archive"
+            docker tag "${image}:${tag}" "${image}:${release_tag}"
+            docker tag "${image}:${tag}" "${image}:latest"
+
+            digest=$(docker push "${image}:${release_tag}" | awk '/digest:/ {print $3; exit}')
+            docker push "${image}:latest" >/dev/null
+
+            cosign sign --yes "${image}@${digest}"
+            jq -n \
+              --arg service "$service" \
+              --arg image "$image" \
+              --arg digest "$digest" \
+              --arg version "${{ steps.set_version.outputs.version }}" \
+              '{service: $service, image: $image, digest: $digest, version: $version}' \
+              > "artifacts/release/image-metadata-${service}.json"
+          done
+
+      - name: Build release manifest
+        run: |
+          jq -n \
+            --arg version "${{ steps.set_version.outputs.version }}" \
+            --arg commit "${{ env.MERGE_COMMIT_SHA }}" \
+            --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{version: $version, commit: $commit, created: $created, services: []}' > release-manifest.json
+
+          for f in artifacts/release/image-metadata-*.json; do
+            [ -f "$f" ] || continue
+            release_service=$(cat "$f")
+            release_manifest_tmp=$(mktemp)
+            jq --argjson svc "$release_service" '.services += [$svc]' release-manifest.json > "$release_manifest_tmp"
+            mv "$release_manifest_tmp" release-manifest.json
+          done
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.set_version.outputs.version }}
+          name: ${{ steps.set_version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release-manifest.json
+            artifacts/rendered/*-latest.yaml
+            artifacts/build/sbom-*.spdx.json
+            artifacts/release/image-metadata-*.json

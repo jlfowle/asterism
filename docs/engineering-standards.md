@@ -61,7 +61,8 @@ These standards apply to both human contributors and AI agents working in Asteri
 - Changes that reduce traceability, weaken controls, or bypass validation should be treated as regressions.
 
 ## 9. Delivery And Release Expectations
-- Build outputs should be reproducible and traceable.
+- Build outputs that become part of the shipped release should be produced once from the reviewed PR commit and reused for release publication.
+- Auxiliary metadata may be assembled or regenerated at release time when that simplifies the workflow, provided the release still points back to the reviewed commit and the PR-built payload.
 - Container artifacts should preserve supply chain metadata such as digests, signatures, attestations, and SBOMs where supported.
 - Release artifacts should be machine-readable where practical to support audit, promotion, and GitOps automation.
 

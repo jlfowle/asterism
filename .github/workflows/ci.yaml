@@ -1,9 +1,6 @@
-name: CI and Release
+name: CI
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     types:
       - opened
@@ -13,11 +10,8 @@ on:
       - main
 
 permissions:
-  contents: write
-  packages: write
-  pull-requests: write
-  id-token: write
-  attestations: write
+  contents: read
+  pull-requests: read
   security-events: write
 
 jobs:
@@ -41,23 +35,9 @@ jobs:
       - name: Set build version
         id: set_version
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            SHA="${{ github.sha }}"
-            SHORT_SHA="${SHA::7}"
-            VERSION="${{ steps.next_version.outputs.version }}-pr.${{ github.event.pull_request.number }}-commit.${SHORT_SHA}"
-          else
-            VERSION="${{ steps.next_version.outputs.version }}"
-
-            # Ensure every push to main yields a unique release version even when
-            # commit types do not trigger a semantic bump (for example build/chore).
-            LATEST_TAG=$(git tag --list "v*" --sort=-version:refname | head -n 1 || true)
-            if [[ -n "${LATEST_TAG}" && "${VERSION}" == "${LATEST_TAG}" ]]; then
-              BASE="${LATEST_TAG#v}"
-              IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE}"
-              PATCH=$((PATCH + 1))
-              VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-            fi
-          fi
+          SHA="${{ github.sha }}"
+          SHORT_SHA="${SHA::7}"
+          VERSION="${{ steps.next_version.outputs.version }}-pr.${{ github.event.pull_request.number }}-commit.${SHORT_SHA}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
   inventory:
@@ -155,6 +135,7 @@ jobs:
             services/${{ matrix.service.id }}/test-results.json
 
   containers:
+    # The PR build is the source of truth for release publication; this job only packages artifacts.
     name: Build Container ${{ matrix.service.id }}
     needs:
       - metadata
@@ -172,74 +153,45 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Log in to GHCR
-        if: github.ref == 'refs/heads/main'
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and optionally push image
-        id: build
+      - name: Build image archive
         uses: docker/build-push-action@v7
         with:
           context: services/${{ matrix.service.id }}
-          push: ${{ github.ref == 'refs/heads/main' }}
+          push: false
           tags: |
             ghcr.io/${{ github.repository }}-${{ matrix.service.id }}:${{ needs.metadata.outputs.version }}
-            ghcr.io/${{ github.repository }}-${{ matrix.service.id }}:latest
+          outputs: type=docker,dest=${{ runner.temp }}/image-${{ matrix.service.id }}.tar
           build-args: |
             VERSION=${{ needs.metadata.outputs.version }}
-            BUILD_DATE=${{ github.event.head_commit.timestamp || github.run_id }}
+            BUILD_DATE=${{ github.event.pull_request.updated_at || github.run_id }}
             COMMIT_SHA=${{ github.sha }}
 
-      - name: Install Cosign
-        if: github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@v4.1.1
-
-      - name: Sign image with keyless Cosign
-        if: github.ref == 'refs/heads/main'
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: |
-          cosign sign --yes ghcr.io/${{ github.repository }}-${{ matrix.service.id }}@${{ steps.build.outputs.digest }}
-
-      - name: Generate SPDX SBOM
-        if: github.ref == 'refs/heads/main'
+      - name: Generate SBOM for image archive
         uses: anchore/sbom-action@v0
         with:
-          image: ghcr.io/${{ github.repository }}-${{ matrix.service.id }}@${{ steps.build.outputs.digest }}
+          file: ${{ runner.temp }}/image-${{ matrix.service.id }}.tar
           format: spdx-json
+          artifact-name: sbom-${{ matrix.service.id }}
           output-file: sbom-${{ matrix.service.id }}.spdx.json
 
-      - name: Attest build provenance
-        if: github.ref == 'refs/heads/main'
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-name: ghcr.io/${{ github.repository }}-${{ matrix.service.id }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true
-
       - name: Write image metadata
-        if: github.ref == 'refs/heads/main'
         run: |
           jq -n \
             --arg service "${{ matrix.service.id }}" \
             --arg image "ghcr.io/${{ github.repository }}-${{ matrix.service.id }}" \
-            --arg digest "${{ steps.build.outputs.digest }}" \
+            --arg tag "${{ needs.metadata.outputs.version }}" \
             --arg version "${{ needs.metadata.outputs.version }}" \
-            '{service: $service, image: $image, digest: $digest, version: $version}' \
+            '{service: $service, image: $image, tag: $tag, version: $version}' \
             > image-metadata-${{ matrix.service.id }}.json
 
-      - name: Upload supply chain artifacts
-        if: github.ref == 'refs/heads/main'
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: supply-chain-${{ matrix.service.id }}
+          name: build-${{ matrix.service.id }}
           path: |
-            sbom-${{ matrix.service.id }}.spdx.json
+            ${{ runner.temp }}/image-${{ matrix.service.id }}.tar
             image-metadata-${{ matrix.service.id }}.json
+            sbom-${{ matrix.service.id }}.spdx.json
 
   render-kustomize:
     name: Render Kustomize ${{ matrix.service.id }}
@@ -247,7 +199,6 @@ jobs:
       - inventory
       - verify
     runs-on: ubuntu-24.04
-    if: github.ref == 'refs/heads/main'
     strategy:
       fail-fast: false
       matrix:
@@ -269,58 +220,3 @@ jobs:
         with:
           name: rendered-${{ matrix.service.id }}
           path: rendered/${{ matrix.service.id }}-latest.yaml
-
-  release:
-    name: Publish GitHub Release
-    needs:
-      - metadata
-      - inventory
-      - containers
-      - render-kustomize
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Download supply-chain artifacts
-        uses: actions/download-artifact@v8
-        with:
-          pattern: supply-chain-*
-          merge-multiple: true
-
-      - name: Download rendered manifests
-        uses: actions/download-artifact@v8
-        with:
-          pattern: rendered-*
-          merge-multiple: true
-
-      - name: Build release manifest
-        run: |
-          jq -n \
-            --arg version "${{ needs.metadata.outputs.version }}" \
-            --arg commit "${{ github.sha }}" \
-            --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{version: $version, commit: $commit, created: $created, services: []}' > release-manifest.json
-
-          for f in image-metadata-*.json; do
-            [ -f "$f" ] || continue
-            release_service=$(cat "$f")
-            release_manifest_tmp=$(mktemp)
-            jq --argjson svc "$release_service" '.services += [$svc]' release-manifest.json > "$release_manifest_tmp"
-            mv "$release_manifest_tmp" release-manifest.json
-          done
-
-      - name: Create release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.metadata.outputs.version }}
-          name: ${{ needs.metadata.outputs.version }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            release-manifest.json
-            *-latest.yaml
-            sbom-*.spdx.json
-            image-metadata-*.json

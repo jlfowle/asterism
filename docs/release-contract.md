@@ -6,6 +6,8 @@ Each GitHub release includes:
 - `sbom-*.spdx.json`
 - `image-metadata-*.json`
 
+The shipped image bytes and rendered manifests are reused from the reviewed PR build. Auxiliary release metadata may be assembled at publish time as long as it still points back to that build and commit.
+
 ## release-manifest.json
 ```json
 {
