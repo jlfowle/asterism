@@ -32,3 +32,5 @@ GitHub Actions in `.github/workflows/ci.yaml` provides:
 - image build and GHCR publish,
 - image signing, SLSA attestation, SBOM generation,
 - rendered Kustomize release assets and machine-readable release manifest.
+
+Main-branch pushes also refresh open PR branches through `.github/workflows/update-pr-branches.yaml`.
