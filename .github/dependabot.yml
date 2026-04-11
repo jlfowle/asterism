@@ -7,6 +7,14 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    groups:
+      angular-dependencies:
+        patterns:
+          - "@angular*"
+      react-group:
+        patterns:
+          - "react"
+          - "react-dom"
   - package-ecosystem: "gomod"
     directory: "/services/unifi"
     schedule:
