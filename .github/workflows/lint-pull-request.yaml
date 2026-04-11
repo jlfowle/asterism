@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Normalize Dependabot PR title to Conventional Commits
         if: github.event.pull_request.user.login == 'dependabot[bot]'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
