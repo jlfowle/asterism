@@ -22,6 +22,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       REPOSITORY: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       MERGE_COMMIT_SHA: ${{ github.event.pull_request.merge_commit_sha }}
       SOURCE_CI_WORKFLOW_FILE: 'ci.yaml'
       COSIGN_EXPERIMENTAL: "true"
@@ -51,7 +52,7 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      # Reuse the successful PR workflow run so the release stays tied to the reviewed build.
+      # Reuse the successful PR workflow run from the exact head SHA so the release stays tied to the reviewed build.
       - name: Locate source CI run
         id: source_run
         run: |
@@ -62,7 +63,7 @@ jobs:
           import urllib.request
 
           repo = os.environ['REPOSITORY']
-          pr_number = int(os.environ['PR_NUMBER'])
+          pr_head_sha = os.environ['PR_HEAD_SHA']
           workflow_file = os.environ['SOURCE_CI_WORKFLOW_FILE']
           token = os.environ['GITHUB_TOKEN']
 
@@ -76,7 +77,7 @@ jobs:
           while True:
               url = (
                   f'https://api.github.com/repos/{repo}/actions/workflows/{workflow_file}/runs'
-                  f'?event=pull_request&status=success&per_page=100&page={page}'
+                  f'?event=pull_request&status=success&head_sha={pr_head_sha}&per_page=100&page={page}'
               )
               request = urllib.request.Request(url, headers=headers)
               with urllib.request.urlopen(request) as response:
@@ -89,7 +90,7 @@ jobs:
               for run in runs:
                   if run.get('conclusion') != 'success':
                       continue
-                  if any(pr.get('number') == pr_number for pr in run.get('pull_requests', [])):
+                  if run.get('head_sha') == pr_head_sha:
                       with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
                           output.write(f"run_id={run['id']}\n")
                           output.write(f"run_url={run['html_url']}\n")
@@ -99,7 +100,7 @@ jobs:
                   break
               page += 1
 
-          print(f'Could not find a successful CI run for PR #{pr_number}', file=sys.stderr)
+          print(f'Could not find a successful CI run for PR head SHA {pr_head_sha}', file=sys.stderr)
           sys.exit(1)
           PY
 
