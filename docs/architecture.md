@@ -12,7 +12,8 @@ This document summarizes the current platform direction. Repository-wide behavio
 ## Repository Layout
 - `services/polaris`: host shell microfrontend canvas.
 - `services/unifi`, `services/cluster`, `services/pfsense`: Go API services with event envelope scaffolding.
-- `deploy/<service>/latest`: Kustomize overlays rendered in CI and attached to releases.
+- `services/<service>/deploy`: Kubernetes deployment manifests (kustomization.yaml entrypoint + base/ directory).
+- `deploy/kustomization.yaml`: Auto-generated consolidated kustomization (auto-discovered via `scripts/update-deploy.sh`).
 - `deploy/platform/security`: Service Mesh mTLS and Cognito OIDC policy scaffolding.
 
 ## API And Event Contracts
