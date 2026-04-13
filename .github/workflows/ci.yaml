@@ -57,7 +57,7 @@ jobs:
         run: |
           SERVICES=$(./inventory.sh)
           CONTAINERIZED=$(jq -c '[ .[] | select(.containerized == true) ]' <<< "$SERVICES")
-          KUSTOMIZE_READY=$(jq -c '[ .[] | select(.has_kustomize_latest == true) ]' <<< "$SERVICES")
+          KUSTOMIZE_READY=$(jq -c '[ .[] | select(.has_kustomize_deployment == true) ]' <<< "$SERVICES")
 
           echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
           echo "containerized=$CONTAINERIZED" >> "$GITHUB_OUTPUT"
@@ -210,13 +210,13 @@ jobs:
       - name: Install Kustomize
         uses: imranismail/setup-kustomize@v3
 
-      - name: Render latest overlay
+      - name: Render service manifest
         run: |
           mkdir -p rendered
-          kustomize build deploy/${{ matrix.service.id }}/latest > rendered/${{ matrix.service.id }}-latest.yaml
+          kustomize build services/${{ matrix.service.id }}/deploy > rendered/${{ matrix.service.id }}.yaml
 
       - name: Upload rendered manifests
         uses: actions/upload-artifact@v7
         with:
           name: rendered-${{ matrix.service.id }}
-          path: rendered/${{ matrix.service.id }}-latest.yaml
+          path: rendered/${{ matrix.service.id }}.yaml

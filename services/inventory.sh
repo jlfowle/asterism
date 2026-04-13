@@ -16,8 +16,8 @@ has_dockerfile() {
   [ -f "${1}/Dockerfile" ]
 }
 
-has_kustomize_overlay() {
-  [ -f "../deploy/${1}/latest/kustomization.yaml" ]
+has_kustomize_deployment() {
+  [ -f "${1}/deploy/kustomization.yaml" ]
 }
 
 for service in *; do
@@ -28,7 +28,7 @@ for service in *; do
   SERVICE=$(jq -nc \
     --arg id "${service}" \
     --arg path "services/${service}" \
-    '{"id":$id,"path":$path,"tools":[],"containerized":false,"has_kustomize_latest":false}')
+    '{"id":$id,"path":$path,"tools":[],"containerized":false,"has_kustomize_deployment":false}')
 
   if uses_nodejs "${service}"; then
     SERVICE=$(jq -c '.tools += ["nodejs"]' <<< "${SERVICE}")
@@ -42,8 +42,8 @@ for service in *; do
     SERVICE=$(jq -c '.containerized = true' <<< "${SERVICE}")
   fi
 
-  if has_kustomize_overlay "${service}"; then
-    SERVICE=$(jq -c '.has_kustomize_latest = true' <<< "${SERVICE}")
+  if has_kustomize_deployment "${service}"; then
+    SERVICE=$(jq -c '.has_kustomize_deployment = true' <<< "${SERVICE}")
   fi
 
   SERVICES=$(jq -c --argjson service "${SERVICE}" '. += [$service]' <<< "${SERVICES}")
