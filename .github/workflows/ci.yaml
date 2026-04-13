@@ -213,10 +213,10 @@ jobs:
       - name: Render service manifest
         run: |
           mkdir -p rendered
-          kustomize build services/${{ matrix.service.id }}/deploy > rendered/${{ matrix.service.id }}-latest.yaml
+          kustomize build services/${{ matrix.service.id }}/deploy > rendered/${{ matrix.service.id }}.yaml
 
       - name: Upload rendered manifests
         uses: actions/upload-artifact@v7
         with:
           name: rendered-${{ matrix.service.id }}
-          path: rendered/${{ matrix.service.id }}-latest.yaml
+          path: rendered/${{ matrix.service.id }}.yaml

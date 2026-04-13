@@ -194,6 +194,6 @@ jobs:
           generate_release_notes: true
           files: |
             release-manifest.json
-            artifacts/rendered/*-latest.yaml
+            artifacts/rendered/*.yaml
             artifacts/build/sbom-*.spdx.json
             artifacts/release/image-metadata-*.json
