@@ -59,9 +59,10 @@ discover_services() {
     done
     
     # Sort services for consistent output
-    mapfile -t services < <(printf '%s\n' "${services[@]}" | sort)
-    
-    printf '%s\n' "${services[@]}"
+    if [[ ${#services[@]} -gt 0 ]]; then
+        mapfile -t services < <(printf '%s\n' "${services[@]}" | sort)
+        printf '%s\n' "${services[@]}"
+    fi
 }
 
 # Generate kustomization.yaml content
