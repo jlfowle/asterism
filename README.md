@@ -23,7 +23,8 @@ Home control center platform using microservices (Go), a runtime-composed microf
 ## Contracts and Deploy
 - API contracts: `services/*/api/openapi.yaml`
 - Event contracts: `services/*/api/asyncapi.yaml`
-- Kustomize overlays: `deploy/*/latest`
+- Deployment manifests: `services/*/deploy` (entrypoint: `kustomization.yaml`)
+- Consolidated deploy (auto-generated): `deploy/kustomization.yaml`
 - Platform security policy scaffolding: `deploy/platform/security`
 
 ## CI/CD
