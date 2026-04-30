@@ -46,12 +46,13 @@ GitHub Actions pipeline includes:
 - service discovery matrix for Node and Go services,
 - test, lint, and build verification per service,
 - security scanning and auditable outputs,
-- container image build and GHCR publish,
-- keyless signing, provenance attestation, and SBOM generation,
+- PR-built container archives, release-time GHCR push for immutable `vX.Y.Z` and moving `latest` tags,
+- keyless image signing and SBOM generation,
 - GitHub Release assets including rendered Kustomize manifests and machine-readable release metadata.
 
 ## GitOps Flow
-1. CI validates pull requests and builds releasable artifacts from `main`.
-2. CI publishes `latest` deployment artifacts plus traceability metadata.
-3. The separate GitOps repository references those artifacts.
+1. CI validates pull requests and uploads release-source image archives, SBOMs, metadata, and rendered manifests.
+2. Release reuses the successful PR artifacts for the exact reviewed head SHA, publishes immutable and `latest` image tags, signs digests, and creates the release manifest.
+3. Release automation commits the new Asterism release ref and rollout annotations to the separate GitOps repository.
 4. OpenShift GitOps reconciles the deployed environment from the GitOps repository.
+5. Release verification polls Argo CD until the application is synced, healthy, rolled out, and running the expected image digests.

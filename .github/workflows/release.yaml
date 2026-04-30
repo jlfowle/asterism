@@ -52,6 +52,41 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
+      - name: Discover release services
+        id: inventory
+        working-directory: services
+        run: |
+          SERVICES=$(./inventory.sh)
+          CONTAINERIZED=$(jq -c '[ .[] | select(.containerized == true) ]' <<< "$SERVICES")
+
+          if [[ "$(jq 'length' <<< "$CONTAINERIZED")" -eq 0 ]]; then
+            echo "No containerized services were discovered for release." >&2
+            exit 1
+          fi
+
+          echo "containerized=${CONTAINERIZED}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate release automation configuration
+        env:
+          CD_REPO_FULL_NAME: ${{ vars.CD_REPO_FULL_NAME }}
+          CD_REPO_GITHUB_APP_ID: ${{ secrets.CD_REPO_GITHUB_APP_ID }}
+          CD_REPO_GITHUB_APP_PRIVATE_KEY: ${{ secrets.CD_REPO_GITHUB_APP_PRIVATE_KEY }}
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+          ARGOCD_SERVER: ${{ vars.ARGOCD_SERVER }}
+          ARGOCD_APP_NAME: ${{ vars.ARGOCD_APP_NAME }}
+        run: |
+          missing=()
+          for name in CD_REPO_FULL_NAME CD_REPO_GITHUB_APP_ID CD_REPO_GITHUB_APP_PRIVATE_KEY ARGOCD_AUTH_TOKEN ARGOCD_SERVER ARGOCD_APP_NAME; do
+            if [[ -z "${!name}" ]]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "Missing release automation configuration: ${missing[*]}" >&2
+            exit 1
+          fi
+
       # Reuse the successful PR workflow run from the exact head SHA so the release stays tied to the reviewed build.
       - name: Locate source CI run
         id: source_run
@@ -114,6 +149,15 @@ jobs:
           merge-multiple: true
           path: artifacts/build
 
+      - name: Normalize release source artifacts
+        env:
+          EXPECTED_SERVICES_JSON: ${{ steps.inventory.outputs.containerized }}
+        run: |
+          scripts/release/normalize-artifacts.sh \
+            --source artifacts/build \
+            --dest artifacts/release-source \
+            --expected-services-json "$EXPECTED_SERVICES_JSON"
+
       - name: Download rendered manifests
         uses: actions/download-artifact@v8
         with:
@@ -136,53 +180,33 @@ jobs:
 
       # Auxiliary release metadata is assembled here because it does not change the shipped bits.
       - name: Publish images and record release metadata
+        env:
+          EXPECTED_SERVICES_JSON: ${{ steps.inventory.outputs.containerized }}
         run: |
-          mkdir -p artifacts/release
-          shopt -s nullglob
-          for metadata in artifacts/build/image-metadata-*.json; do
-            service=$(jq -r '.service' "$metadata")
-            image=$(jq -r '.image' "$metadata")
-            tag=$(jq -r '.tag' "$metadata")
-            archive="artifacts/build/image-${service}.tar"
-            release_tag="${{ steps.set_version.outputs.version }}"
-
-            if [[ ! -f "$archive" ]]; then
-              echo "Missing image archive for ${service}: ${archive}" >&2
-              exit 1
-            fi
-
-            docker load -i "$archive"
-            docker tag "${image}:${tag}" "${image}:${release_tag}"
-            docker tag "${image}:${tag}" "${image}:latest"
-
-            digest=$(docker push "${image}:${release_tag}" | awk '/digest:/ {print $3; exit}')
-            docker push "${image}:latest" >/dev/null
-
-            cosign sign --yes "${image}@${digest}"
-            jq -n \
-              --arg service "$service" \
-              --arg image "$image" \
-              --arg digest "$digest" \
-              --arg version "${{ steps.set_version.outputs.version }}" \
-              '{service: $service, image: $image, digest: $digest, version: $version}' \
-              > "artifacts/release/image-metadata-${service}.json"
-          done
+          scripts/release/publish-images.sh \
+            --source artifacts/release-source \
+            --release-dir artifacts/release \
+            --version "${{ steps.set_version.outputs.version }}" \
+            --expected-services-json "$EXPECTED_SERVICES_JSON"
 
       - name: Build release manifest
+        env:
+          EXPECTED_SERVICES_JSON: ${{ steps.inventory.outputs.containerized }}
+          SOURCE_CI_RUN_ID: ${{ steps.source_run.outputs.run_id }}
+          SOURCE_CI_RUN_URL: ${{ steps.source_run.outputs.run_url }}
         run: |
-          jq -n \
-            --arg version "${{ steps.set_version.outputs.version }}" \
-            --arg commit "${{ env.MERGE_COMMIT_SHA }}" \
-            --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{version: $version, commit: $commit, created: $created, services: []}' > release-manifest.json
+          scripts/release/build-release-manifest.sh \
+            --release-dir artifacts/release \
+            --output release-manifest.json \
+            --version "${{ steps.set_version.outputs.version }}" \
+            --commit "${{ env.MERGE_COMMIT_SHA }}" \
+            --expected-services-json "$EXPECTED_SERVICES_JSON"
 
-          for f in artifacts/release/image-metadata-*.json; do
-            [ -f "$f" ] || continue
-            release_service=$(cat "$f")
-            release_manifest_tmp=$(mktemp)
-            jq --argjson svc "$release_service" '.services += [$svc]' release-manifest.json > "$release_manifest_tmp"
-            mv "$release_manifest_tmp" release-manifest.json
-          done
+      - name: Compute release manifest digest
+        id: release_manifest
+        run: |
+          digest="$(sha256sum release-manifest.json | awk '{print $1}')"
+          echo "sha256=${digest}" >> "$GITHUB_OUTPUT"
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v3
@@ -195,5 +219,112 @@ jobs:
           files: |
             release-manifest.json
             artifacts/rendered/*.yaml
-            artifacts/build/sbom-*.spdx.json
+            artifacts/release-source/sbom-*.spdx.json
             artifacts/release/image-metadata-*.json
+
+      - name: Resolve CD repository
+        id: cd_repo
+        env:
+          CD_REPO_FULL_NAME: ${{ vars.CD_REPO_FULL_NAME }}
+        run: |
+          if [[ -z "$CD_REPO_FULL_NAME" ]]; then
+            echo "Repository variable CD_REPO_FULL_NAME must be configured." >&2
+            exit 1
+          fi
+          if [[ "$CD_REPO_FULL_NAME" != */* ]]; then
+            echo "CD_REPO_FULL_NAME must be in owner/name form: $CD_REPO_FULL_NAME" >&2
+            exit 1
+          fi
+
+          owner="${CD_REPO_FULL_NAME%%/*}"
+          name="${CD_REPO_FULL_NAME#*/}"
+          echo "owner=${owner}" >> "$GITHUB_OUTPUT"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+          echo "full_name=${CD_REPO_FULL_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Create CD repository app token
+        id: cd_token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.CD_REPO_GITHUB_APP_ID }}
+          private-key: ${{ secrets.CD_REPO_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ steps.cd_repo.outputs.owner }}
+          repositories: ${{ steps.cd_repo.outputs.name }}
+
+      - name: Checkout CD repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.cd_repo.outputs.full_name }}
+          token: ${{ steps.cd_token.outputs.token }}
+          path: os-config
+          ref: main
+          fetch-depth: 0
+
+      - name: Install Kustomize
+        uses: imranismail/setup-kustomize@v3
+
+      - name: Promote release in CD repository
+        run: |
+          scripts/release/promote-os-config.py \
+            --repo-dir os-config \
+            --version "${{ steps.set_version.outputs.version }}" \
+            --source-repo "${{ github.repository }}" \
+            --commit "${{ env.MERGE_COMMIT_SHA }}" \
+            --manifest-sha256 "${{ steps.release_manifest.outputs.sha256 }}"
+
+      - name: Validate promoted GitOps overlay
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if kustomize build os-config/app/asterism > /tmp/asterism-promoted.yaml; then
+              exit 0
+            fi
+            echo "Promoted overlay did not render yet; retrying (${attempt}/6)."
+            sleep 10
+          done
+
+          kustomize build os-config/app/asterism
+
+      - name: Commit and push CD promotion
+        id: cd_commit
+        run: |
+          git -C os-config config user.name "asterism-release[bot]"
+          git -C os-config config user.email "asterism-release[bot]@users.noreply.github.com"
+
+          if git -C os-config diff --quiet -- app/asterism/kustomization.yaml; then
+            echo "os-config already points at ${{ steps.set_version.outputs.version }}."
+          else
+            git -C os-config add app/asterism/kustomization.yaml
+            git -C os-config commit -m "chore(asterism): promote ${{ steps.set_version.outputs.version }}"
+            git -C os-config push origin HEAD:main
+          fi
+
+          echo "sha=$(git -C os-config rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Argo CD deployment
+        env:
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+          ARGOCD_SERVER: ${{ vars.ARGOCD_SERVER }}
+          ARGOCD_APP_NAME: ${{ vars.ARGOCD_APP_NAME }}
+          ARGOCD_PROJECT: ${{ vars.ARGOCD_PROJECT }}
+          ARGOCD_APP_NAMESPACE: ${{ vars.ARGOCD_APP_NAMESPACE }}
+        run: |
+          if [[ -z "$ARGOCD_AUTH_TOKEN" ]]; then
+            echo "Repository secret ARGOCD_AUTH_TOKEN must be configured." >&2
+            exit 1
+          fi
+          if [[ -z "$ARGOCD_SERVER" || -z "$ARGOCD_APP_NAME" ]]; then
+            echo "Repository variables ARGOCD_SERVER and ARGOCD_APP_NAME must be configured." >&2
+            exit 1
+          fi
+
+          scripts/release/verify-argocd-deployment.py \
+            --server "$ARGOCD_SERVER" \
+            --token "$ARGOCD_AUTH_TOKEN" \
+            --app "$ARGOCD_APP_NAME" \
+            --project "$ARGOCD_PROJECT" \
+            --namespace "$ARGOCD_APP_NAMESPACE" \
+            --release-manifest release-manifest.json \
+            --release-version "${{ steps.set_version.outputs.version }}" \
+            --release-commit "${{ env.MERGE_COMMIT_SHA }}" \
+            --manifest-sha256 "${{ steps.release_manifest.outputs.sha256 }}" \
+            --os-config-revision "${{ steps.cd_commit.outputs.sha }}"

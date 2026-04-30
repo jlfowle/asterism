@@ -184,14 +184,40 @@ jobs:
             '{service: $service, image: $image, tag: $tag, version: $version}' \
             > image-metadata-${{ matrix.service.id }}.json
 
+      - name: Stage release source artifacts
+        run: |
+          set -euo pipefail
+          stage="release-source/${{ matrix.service.id }}"
+          mkdir -p "$stage"
+
+          cp "${{ runner.temp }}/image-${{ matrix.service.id }}.tar" "$stage/"
+          cp "image-metadata-${{ matrix.service.id }}.json" "$stage/"
+          cp "sbom-${{ matrix.service.id }}.spdx.json" "$stage/"
+
+          test -s "$stage/image-${{ matrix.service.id }}.tar"
+          test -s "$stage/image-metadata-${{ matrix.service.id }}.json"
+          test -s "$stage/sbom-${{ matrix.service.id }}.spdx.json"
+          jq -e \
+            --arg service "${{ matrix.service.id }}" \
+            --arg version "${{ needs.metadata.outputs.version }}" \
+            '.service == $service and .tag == $version and .version == $version and (.image | length > 0)' \
+            "$stage/image-metadata-${{ matrix.service.id }}.json" > /dev/null
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
           name: build-${{ matrix.service.id }}
-          path: |
-            ${{ runner.temp }}/image-${{ matrix.service.id }}.tar
-            image-metadata-${{ matrix.service.id }}.json
-            sbom-${{ matrix.service.id }}.spdx.json
+          path: release-source/${{ matrix.service.id }}/*
+
+  release-automation:
+    name: Validate Release Automation
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run release automation checks
+        run: scripts/release/test-release-automation.sh
 
   render-kustomize:
     name: Render Kustomize ${{ matrix.service.id }}

@@ -36,9 +36,10 @@ jobs:
           SERVICES=$(./inventory.sh)
           REQUIRED_CHECKS=$(jq -cn \
             --argjson services "$SERVICES" \
-            '[ "Resolve Version", "Discover Services", "Validate PR title" ]
+            '[ "Resolve Version", "Discover Services", "Validate PR title", "Validate Release Automation" ]
             + ($services | map("Verify " + .id))
-            + ($services | map(select(.containerized == true) | "Build Container " + .id))')
+            + ($services | map(select(.containerized == true) | "Build Container " + .id))
+            + ($services | map(select(.has_kustomize_deployment == true) | "Render Kustomize " + .id))')
 
           echo "checks=${REQUIRED_CHECKS}" >> "$GITHUB_OUTPUT"
 

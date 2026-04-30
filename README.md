@@ -37,9 +37,15 @@ Ports used by the local stack:
 ## CI/CD
 GitHub Actions in `.github/workflows/ci.yaml` provides:
 - multi-service test/lint/build validation,
-- image build and GHCR publish,
-- image signing, SLSA attestation, SBOM generation,
-- rendered Kustomize release assets and machine-readable release manifest.
+- PR-built image archives, SBOMs, and image metadata for each containerized service,
+- rendered Kustomize release assets,
+- release automation script checks.
+
+GitHub Actions in `.github/workflows/release.yaml` provides:
+- immutable release image tags and moving `latest` tags in GHCR,
+- keyless image signing and machine-readable release metadata,
+- automated GitOps promotion to the configured `os-config` repository,
+- Argo CD sync, health, rollout, and image digest verification.
 
 Pull request titles must use Conventional Commits format, for example `chore: cleanup developer workflow and deploy manifests`, because the PR title check enforces it.
 Pull request branches should use signed commits. If you rewrite branch history, re-sign the new commits before pushing.
