@@ -64,8 +64,9 @@ These standards apply to both human contributors and AI agents working in Asteri
 ## 9. Delivery And Release Expectations
 - Build outputs that become part of the shipped release should be produced once from the reviewed PR commit and reused for release publication.
 - Auxiliary metadata may be assembled or regenerated at release time when that simplifies the workflow, provided the release still points back to the reviewed commit and the PR-built payload.
-- Container artifacts should preserve supply chain metadata such as digests, signatures, attestations, and SBOMs where supported.
+- Container releases must publish both immutable release tags and the moving `latest` deployment tags, record pushed digests, sign immutable digests, and preserve SBOM metadata.
 - Release artifacts should be machine-readable where practical to support audit, promotion, and GitOps automation.
+- GitOps promotion should update the separate deployment repository only after release images and release metadata are complete, and post-promotion verification should confirm Argo CD sync, health, rollout, and running image digests.
 
 ## 10. Repository Working Agreements
 - Prefer declarative automation over manual operational steps.
