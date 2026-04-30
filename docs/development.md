@@ -9,6 +9,8 @@ working local platform quickly.
 2. Run `make dev` from the repository root.
 3. Open `http://localhost:3000` for Polaris.
 
+Before opening a PR, make sure commit signing is configured on your machine. This repository expects signed commits on pull request branches so GitHub can verify the change origin. If you already have an SSH signing key loaded, `ssh-add -L` should show the public key you can register with GitHub and point Git at for signing.
+
 `make dev` starts the full local stack:
 
 - Polaris on `3000`
@@ -28,6 +30,17 @@ home-network credentials.
 - `make render-deploy` regenerates and validates the consolidated Kustomize
   output.
 - `make clean` removes generated build output for every service.
+
+## Commit Signing
+
+GitHub verifies signed commits on pull request branches, so configure your local Git client before you start work:
+
+1. Ensure your SSH signing key is loaded in `ssh-agent`.
+2. Use `ssh-add -L` to confirm which public key GitHub should trust.
+3. Add that key in GitHub as an SSH signing key.
+4. Set Git to sign commits by default with SSH for this repository or globally.
+
+Typical Git settings are `git config --global gpg.format ssh` and `git config --global commit.gpgsign true`.
 
 ## Service Layout
 

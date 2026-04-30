@@ -42,5 +42,6 @@ GitHub Actions in `.github/workflows/ci.yaml` provides:
 - rendered Kustomize release assets and machine-readable release manifest.
 
 Pull request titles must use Conventional Commits format, for example `chore: cleanup developer workflow and deploy manifests`, because the PR title check enforces it.
+Pull request branches should use signed commits. If you rewrite branch history, re-sign the new commits before pushing.
 
 Main-branch pushes also refresh open PR branches through `.github/workflows/update-pr-branches.yaml`.
