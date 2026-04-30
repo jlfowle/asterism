@@ -41,4 +41,6 @@ GitHub Actions in `.github/workflows/ci.yaml` provides:
 - image signing, SLSA attestation, SBOM generation,
 - rendered Kustomize release assets and machine-readable release manifest.
 
+Pull request titles must use Conventional Commits format, for example `chore: cleanup developer workflow and deploy manifests`, because the PR title check enforces it.
+
 Main-branch pushes also refresh open PR branches through `.github/workflows/update-pr-branches.yaml`.

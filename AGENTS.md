@@ -29,6 +29,7 @@ This file is the fast-start guidance for any AI agent or contributor working in 
 ## Delivery Rules
 - CI runs in GitHub Actions.
 - Pull requests must build, lint, and test to an enterprise-minded security and compliance standard.
+- Pull request titles must use Conventional Commits format, because PR title linting is enforced in GitHub Actions.
 - CD is handled through OpenShift GitOps with Kustomize from a separate Argo CD repository.
 - The only deployed environment is driven from `main`.
 - Deployment consumes `latest` tags from successful `main` builds, while releases should still preserve traceability metadata.
