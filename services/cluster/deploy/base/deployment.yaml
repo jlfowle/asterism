@@ -31,9 +31,6 @@ spec:
               value: ""
             - name: CLUSTER_API_URL
               value: "https://kubernetes.default.svc/version"
-          envFrom:
-            - secretRef:
-                name: cluster-secrets
           livenessProbe:
             httpGet:
               path: /healthz

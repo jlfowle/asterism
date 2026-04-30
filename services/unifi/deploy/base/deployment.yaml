@@ -31,9 +31,6 @@ spec:
               value: ""
             - name: UNIFI_API_URL
               value: ""
-          envFrom:
-            - secretRef:
-                name: unifi-secrets
           livenessProbe:
             httpGet:
               path: /healthz

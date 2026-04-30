@@ -117,10 +117,10 @@ func Probe(ctx context.Context) Snapshot {
 	}
 
 	metrics := map[string]any{
-		"clusterVersion":   versionResp.GitVersion,
-		"nodeCount":        len(nodeResp.Items),
-		"readyNodeCount":   healthyNodes,
-		"podCount":         len(podResp.Items),
+		"clusterVersion":    versionResp.GitVersion,
+		"nodeCount":         len(nodeResp.Items),
+		"readyNodeCount":    healthyNodes,
+		"podCount":          len(podResp.Items),
 		"nodesFetchSuccess": nodesErr == nil,
 		"podsFetchSuccess":  podsErr == nil,
 	}

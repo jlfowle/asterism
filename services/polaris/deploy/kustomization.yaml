@@ -5,11 +5,13 @@ resources:
   - ./base/deployment.yaml
   - ./base/service.yaml
   - ./base/route.yaml
-  - ./base/externalsecret.yaml
 images:
   - name: polaris
     newName: ghcr.io/jlfowle/asterism-polaris
     newTag: latest
-commonLabels:
-  app.kubernetes.io/name: polaris
-  app.kubernetes.io/part-of: asterism
+labels:
+  - pairs:
+      app.kubernetes.io/name: polaris
+      app.kubernetes.io/part-of: asterism
+    includeSelectors: true
+    includeTemplates: true
