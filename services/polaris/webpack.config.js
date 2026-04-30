@@ -11,9 +11,37 @@ module.exports = {
     path: path.resolve(__dirname, "dist"),
   },
   devServer: {
+    host: "0.0.0.0",
     port: 3000,
+    allowedHosts: "all",
     historyApiFallback: true,
     static: path.resolve(__dirname, "dist"),
+    proxy: [
+      {
+        context: ["/api/services/unifi"],
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+        pathRewrite: {
+          "^/api/services/unifi": "",
+        },
+      },
+      {
+        context: ["/api/services/cluster"],
+        target: "http://127.0.0.1:8082",
+        changeOrigin: true,
+        pathRewrite: {
+          "^/api/services/cluster": "",
+        },
+      },
+      {
+        context: ["/api/services/pfsense"],
+        target: "http://127.0.0.1:8083",
+        changeOrigin: true,
+        pathRewrite: {
+          "^/api/services/pfsense": "",
+        },
+      },
+    ],
   },
   module: {
     rules: [

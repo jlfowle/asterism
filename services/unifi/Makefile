@@ -1,6 +1,8 @@
 .PHONY: run build test lint fmt clean
 
 BINARY=dist/server
+GOCACHE?=$(CURDIR)/.cache/go-build
+export GOCACHE
 
 run:
 	go run ./cmd/server
@@ -20,4 +22,4 @@ fmt:
 	gofmt -w $(shell find . -name '*.go' -type f)
 
 clean:
-	rm -rf dist coverage.out
+	rm -rf dist coverage.out .cache

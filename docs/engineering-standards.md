@@ -56,6 +56,7 @@ These standards apply to both human contributors and AI agents working in Asteri
 - CI is implemented in GitHub Actions.
 - Pull requests must at minimum build, lint, and test the changed services.
 - Pull request automation should expose a single aggregate merge-readiness check that is suitable for branch protection as the only required validation gate.
+- Pull request titles must follow Conventional Commits format, because PR title linting is part of the required validation path.
 - CI should reflect the standards of a security-focused and compliance-focused enterprise.
 - Security scanning, artifact integrity, provenance, SBOM generation, and auditable release outputs are preferred defaults rather than optional extras.
 - Changes that reduce traceability, weaken controls, or bypass validation should be treated as regressions.
@@ -86,7 +87,14 @@ These standards apply to both human contributors and AI agents working in Asteri
 - When automation (for example Dependabot) cannot satisfy a validation, fix the underlying workflow or automation behavior so policy remains intact.
 - Any intentional reduction in validation enforcement requires explicit approval from the repository owner and should be documented in-repo with rationale.
 
-## 13. Decision Governance
+## 13. Commit Provenance
+- Pull request branches should use signed commits so GitHub can verify the change origin.
+- SSH signing is the preferred default for individual contributors when it is available.
+- Contributors should configure Git to sign commits by default before opening or rewriting a pull request branch.
+- If a branch is rewritten, the rewritten commits must be signed again before pushing.
+- Use the loaded signing key from `ssh-add -L` to register the matching GitHub SSH signing key and to configure `user.signingkey` locally.
+
+## 14. Decision Governance
 - Major decisions (architecture, security posture, deployment model, branch protection, required checks, and policy gate changes) require explicit user or maintainer direction.
 - Contributors and AI agents should present tradeoffs and recommendations, then pause for approval before implementing major policy shifts.
 - If there is uncertainty about whether a change is a major decision, treat it as major and escalate.

@@ -7,6 +7,7 @@ Home control center platform using microservices (Go), a runtime-composed microf
 - Durable engineering standards: `docs/engineering-standards.md`
 - Architecture overview: `docs/architecture.md`
 - Release artifact contract: `docs/release-contract.md`
+- Developer workflow guide: `docs/development.md`
 
 ## Services
 - `polaris`: host shell UI and runtime microfrontend registry client.
@@ -15,10 +16,16 @@ Home control center platform using microservices (Go), a runtime-composed microf
 - `pfsense`: pfSense integration service scaffold.
 
 ## Local Development
-1. `cd services/polaris && make run`
-2. `cd services/unifi && make run`
-3. `cd services/cluster && make run`
-4. `cd services/pfsense && make run`
+1. `make dev`
+2. Open `http://localhost:3000`
+3. Use `make test`, `make lint`, `make build`, and `make render-deploy` for validation
+
+Ports used by the local stack:
+
+- Polaris: `3000`
+- UniFi: `8081`
+- Cluster: `8082`
+- pfSense: `8083`
 
 ## Contracts and Deploy
 - API contracts: `services/*/api/openapi.yaml`
@@ -33,5 +40,8 @@ GitHub Actions in `.github/workflows/ci.yaml` provides:
 - image build and GHCR publish,
 - image signing, SLSA attestation, SBOM generation,
 - rendered Kustomize release assets and machine-readable release manifest.
+
+Pull request titles must use Conventional Commits format, for example `chore: cleanup developer workflow and deploy manifests`, because the PR title check enforces it.
+Pull request branches should use signed commits. If you rewrite branch history, re-sign the new commits before pushing.
 
 Main-branch pushes also refresh open PR branches through `.github/workflows/update-pr-branches.yaml`.

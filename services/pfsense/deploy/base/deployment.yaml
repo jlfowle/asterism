@@ -31,9 +31,6 @@ spec:
               value: ""
             - name: PFSENSE_API_URL
               value: ""
-          envFrom:
-            - secretRef:
-                name: pfsense-secrets
           livenessProbe:
             httpGet:
               path: /healthz

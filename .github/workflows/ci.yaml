@@ -132,7 +132,7 @@ jobs:
           name: test-results-${{ matrix.service.id }}
           path: |
             services/${{ matrix.service.id }}/test-results
-            services/${{ matrix.service.id }}/test-results.json
+            services/${{ matrix.service.id }}/test-results/results.json
 
   containers:
     # The PR build is the source of truth for release publication; this job only packages artifacts.

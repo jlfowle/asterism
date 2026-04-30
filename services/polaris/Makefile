@@ -1,6 +1,6 @@
-.PHONY: run build test lint
+.PHONY: run build test lint clean
 
-run: dist/main.js
+run: node_modules
 	yarn start
 
 build: dist/main.js
@@ -14,9 +14,8 @@ test: $(wildcard src/**/*.js) node_modules
 lint: node_modules
 	yarn lint
 
-node_modules: package.json yarn.lock
-	yarn install
-	touch node_modules
+node_modules:
+	test -d node_modules || yarn install
 
 clean:
 	rm -rf dist coverage node_modules test-results
