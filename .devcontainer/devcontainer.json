@@ -21,7 +21,8 @@
       "installYarnUsingApt": false
     },
     "ghcr.io/devcontainers/features/go:1.3.3": {
-      "version": "1.23.8"
+      "version": "1.26.2",
+      "golangciLintVersion": "2.11.4"
     },
     "ghcr.io/devcontainers/features/kubectl-helm-minikube:1.3.1": {
       "version": "1.32",
@@ -36,10 +37,14 @@
       "installDockerComposeSwitch": true
     }
   },
-  "workspaceFolder": "/workspaces/asterism",
+  "workspaceMount": "source=${localWorkspaceFolder}/,target=/workspace,type=bind,consistency=cached",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-home,target=/home/vscode,type=volume"
+  ],
   "remoteUser": "vscode",
   "forwardPorts": [3000, 8080, 8081, 8082, 8083],
-  "postCreateCommand": "cd services/polaris && yarn install && cd /workspaces/asterism && find services -mindepth 2 -maxdepth 2 -name go.mod -print0 | xargs -0 -I{} sh -c 'cd \"$(dirname \"{}\")\" && go mod download'",
+  "postCreateCommand": "cd services/polaris && yarn install && cd /workspace && find services -mindepth 2 -maxdepth 2 -name go.mod -print0 | xargs -0 -I{} sh -c 'cd \"$(dirname \"{}\")\" && go mod download'",
   "remoteEnv": {
     "CGO_ENABLED": "0"
   },
