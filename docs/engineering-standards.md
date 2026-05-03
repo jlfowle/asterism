@@ -102,6 +102,7 @@ These standards apply to both human contributors and AI agents working in Asteri
 - If there is uncertainty about whether a change is a major decision, treat it as major and escalate.
 
 ## 15. Asterism Change Workflow
-- For any change that modifies files in this repository, the default delivery path is branch-first and PR-first: create a dedicated branch, make signed commits, open a PR, and keep watching CI checks plus review comments until the PR is merge-ready or the user explicitly asks you to stop.
-- Treat local edits as work in progress, not as the finished deliverable, unless the user explicitly requested analysis-only or local-only help.
+- For any change that modifies files in this repository, the default delivery path is branch-first and PR-first: create a dedicated branch, make signed commits, open a PR, and keep watching CI checks plus review comments until the PR is merge-ready.
+- Do not leave an Asterism PR in draft by default. Reserve draft status for intentionally incomplete work or when the user explicitly asks for a draft PR.
+- Once the expected checks are green and you are confident the change is complete, mark the PR ready for review before treating the work as finished.
 - If GitHub publication is not possible in the current environment, say so explicitly and stop at the local artifact rather than implying the PR flow has completed.
