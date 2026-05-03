@@ -1,5 +1,7 @@
 .PHONY: dev test lint build clean render-deploy
 
+.DEFAULT_GOAL := dev
+
 SERVICES := cluster pfsense polaris unifi
 
 dev:
