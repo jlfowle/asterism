@@ -48,6 +48,7 @@ GitHub Actions pipeline includes:
 - security scanning and auditable outputs,
 - PR-built container archives, release-time GHCR push for immutable `vX.Y.Z` and moving `latest` tags,
 - keyless image signing and SBOM generation,
+- release automation in the GitHub Actions `release` environment with environment-scoped release credentials,
 - GitHub Release assets including rendered Kustomize manifests and machine-readable release metadata.
 
 ## GitOps Flow

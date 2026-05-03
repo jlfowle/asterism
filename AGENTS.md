@@ -32,6 +32,9 @@ This file is the fast-start guidance for any AI agent or contributor working in 
 - Pull request titles must use Conventional Commits format, because PR title linting is enforced in GitHub Actions.
 - Pull request branches should use signed commits so GitHub can verify the change origin.
 - CD is handled through OpenShift GitOps with Kustomize from a separate Argo CD repository.
+- Release automation runs in the GitHub Actions `release` environment; keep release-only credentials there.
+- Use a GitHub App installation token for the cross-repo promotion commit into `os-config` instead of a long-lived PAT.
+- Argo CD automation should use the `asterism-release` token-only local user configured in the GitOps repo, not the human SSO path.
 - The only deployed environment is driven from `main`.
 - Deployment consumes `latest` tags from successful `main` builds, while releases should still preserve traceability metadata.
 
