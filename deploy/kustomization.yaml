@@ -8,4 +8,5 @@ resources:
   - ../services/pfsense/deploy
   - ../services/polaris/deploy
   - ../services/unifi/deploy
+  - platform/routing
   - platform/security

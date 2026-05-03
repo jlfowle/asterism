@@ -84,6 +84,7 @@ EOF
     done
     
     # Add platform cross-cutting concerns
+    echo "  - platform/routing"
     echo "  - platform/security"
 }
 

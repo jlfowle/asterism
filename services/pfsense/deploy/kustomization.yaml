@@ -4,7 +4,6 @@ namespace: asterism
 resources:
   - ./base/deployment.yaml
   - ./base/service.yaml
-  - ./base/route.yaml
 images:
   - name: pfsense
     newName: ghcr.io/jlfowle/asterism-pfsense
