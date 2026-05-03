@@ -64,6 +64,52 @@ if "$SCRIPT_DIR/build-release-manifest.sh" --release-dir "$TMP_DIR" --output "$T
   exit 1
 fi
 
+resolve_dir="$TMP_DIR/resolve"
+mkdir -p "$resolve_dir"
+cat > "$resolve_dir/release-manifest.json" <<'EOF'
+{"version":"v1.2.3","commit":"abcdef0123456789","created":"2026-05-03T00:00:00Z","sourceCiRunId":"42","sourceCiRunUrl":"https://example.invalid/run/42","services":[]}
+EOF
+jq -n \
+  --arg manifest_url "file://$resolve_dir/release-manifest.json" \
+  '[{
+      tag_name: "v1.2.3",
+      html_url: "https://example.invalid/releases/v1.2.3",
+      draft: false,
+      prerelease: false,
+      assets: [
+        {
+          name: "release-manifest.json",
+          browser_download_url: $manifest_url
+        }
+      ]
+    }]' \
+  > "$resolve_dir/releases.json"
+
+resolved_manifest="$TMP_DIR/resolved-release-manifest.json"
+resolved_output="$("$SCRIPT_DIR/resolve-release-state.sh" \
+  --repo jlfowle/asterism \
+  --commit abcdef0123456789 \
+  --fallback-version v9.9.9 \
+  --manifest-path "$resolved_manifest" \
+  --releases-json "$resolve_dir/releases.json")"
+
+echo "$resolved_output" | jq -e '.release_exists == true and .version == "v1.2.3"' > /dev/null
+cmp -s "$resolved_manifest" "$resolve_dir/release-manifest.json"
+
+fallback_manifest="$TMP_DIR/fallback-release-manifest.json"
+fallback_output="$("$SCRIPT_DIR/resolve-release-state.sh" \
+  --repo jlfowle/asterism \
+  --commit feedfacefeedface \
+  --fallback-version v9.9.9 \
+  --manifest-path "$fallback_manifest" \
+  --releases-json "$resolve_dir/releases.json")"
+
+echo "$fallback_output" | jq -e '.release_exists == false and .version == "v9.9.9"' > /dev/null
+if [[ -e "$fallback_manifest" ]]; then
+  echo "resolve-release-state.sh unexpectedly wrote a manifest for a missing release." >&2
+  exit 1
+fi
+
 cd_repo="$TMP_DIR/os-config"
 mkdir -p "$cd_repo/app/asterism"
 cat > "$cd_repo/app/asterism/kustomization.yaml" <<'EOF'
@@ -87,5 +133,19 @@ EOF
 grep -q 'github.com/jlfowle/asterism//deploy?ref=v1.2.3' "$cd_repo/app/asterism/kustomization.yaml"
 grep -q 'asterism.dev~1release-version' "$cd_repo/app/asterism/kustomization.yaml"
 grep -q '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' "$cd_repo/app/asterism/kustomization.yaml"
+
+before_sha="$(sha256sum "$cd_repo/app/asterism/kustomization.yaml" | awk '{print $1}')"
+"$SCRIPT_DIR/promote-os-config.py" \
+  --repo-dir "$cd_repo" \
+  --version v1.2.3 \
+  --source-repo jlfowle/asterism \
+  --commit abcdef0123456789 \
+  --manifest-sha256 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+after_sha="$(sha256sum "$cd_repo/app/asterism/kustomization.yaml" | awk '{print $1}')"
+
+if [[ "$before_sha" != "$after_sha" ]]; then
+  echo "promote-os-config.py changed an already up-to-date overlay." >&2
+  exit 1
+fi
 
 echo "Release automation checks passed."
