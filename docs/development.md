@@ -11,6 +11,8 @@ working local platform quickly.
 
 Before opening a PR, make sure commit signing is configured on your machine. This repository expects signed commits on pull request branches so GitHub can verify the change origin. If you already have an SSH signing key loaded, `ssh-add -L` should show the public key you can register with GitHub and point Git at for signing.
 
+For Asterism changes, do not stop at local validation alone. Put the work on a dedicated signed branch, open the PR, and keep an eye on CI checks and review comments until the PR is ready to merge or you have a reason to pause.
+
 `make dev` starts the full local stack:
 
 - Polaris on `3000`

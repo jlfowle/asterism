@@ -27,8 +27,8 @@ ARG COMMIT_SHA
 # Copy the built files to the Nginx HTML directory
 COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 
-# Copy custom Nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy the site config into Nginx's conf.d include path
+COPY default.conf /etc/nginx/conf.d/default.conf
 
 # Add OCI annotations as labels
 LABEL org.opencontainers.image.title="Polaris Service"

@@ -32,6 +32,7 @@ This file is the fast-start guidance for any AI agent or contributor working in 
 - Pull request titles must use Conventional Commits format, because PR title linting is enforced in GitHub Actions.
 - Pull request branches should use signed commits so GitHub can verify the change origin.
 - Asterism repository changes should move through pull requests and merge review; the only direct push in the release flow belongs to the separate GitOps repository.
+- For any Asterism code or config change, default to the full GitHub workflow: create a dedicated branch, make signed commits on that branch, open a PR, and keep watching CI checks plus review threads until the PR is ready to merge or the user asks you to stop.
 - CD is handled through OpenShift GitOps with Kustomize from a separate Argo CD repository.
 - Release automation runs in the GitHub Actions `release` environment; keep release-only credentials there.
 - Use a GitHub App installation token for the cross-repo promotion commit into `os-config` instead of a long-lived PAT.
