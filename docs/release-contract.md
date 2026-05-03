@@ -42,6 +42,7 @@ Consumers (GitOps automation, audit jobs, or promotion tooling) can parse this f
   - Repository variable: `CD_REPO_GITHUB_APP_ID`
 - Argo CD verification credential:
   - Environment secret: `ARGOCD_AUTH_TOKEN`
+  - The token user must have Argo CD read access to the `apps` project so the verifier can fetch application status and resource trees.
 - Repository variables:
   - `CD_REPO_FULL_NAME`, for example `jlfowle/os-config`
   - `ARGOCD_SERVER`

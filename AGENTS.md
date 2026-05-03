@@ -36,6 +36,7 @@ This file is the fast-start guidance for any AI agent or contributor working in 
 - Release automation runs in the GitHub Actions `release` environment; keep release-only credentials there.
 - Use a GitHub App installation token for the cross-repo promotion commit into `os-config` instead of a long-lived PAT.
 - Argo CD automation should use the `asterism-release` token-only local user configured in the GitOps repo, not the human SSO path.
+- That Argo CD token still needs read access to the `apps` project so the release job can fetch application status and resource trees.
 - The only deployed environment is driven from `main`.
 - Deployment consumes `latest` tags from successful `main` builds, while releases should still preserve traceability metadata.
 
