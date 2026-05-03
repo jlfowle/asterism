@@ -39,6 +39,7 @@ These standards apply to both human contributors and AI agents working in Asteri
 - Secrets must not be committed to the repository.
 - CI should avoid printing or persisting sensitive values in logs or artifacts.
 - Environment-specific confidential values belong in secret management and deployment configuration, not in application source.
+- GitHub Actions release-only credentials should live in the `release` environment so they are only exposed to the release job.
 
 ## 6. OpenShift And Deployment Model
 - Deployment is GitOps-driven through OpenShift GitOps using Kustomize.

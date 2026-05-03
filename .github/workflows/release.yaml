@@ -18,6 +18,7 @@ jobs:
   release:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-24.04
+    environment: release
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       REPOSITORY: ${{ github.repository }}
@@ -69,7 +70,7 @@ jobs:
       - name: Validate release automation configuration
         env:
           CD_REPO_FULL_NAME: ${{ vars.CD_REPO_FULL_NAME }}
-          CD_REPO_GITHUB_APP_ID: ${{ secrets.CD_REPO_GITHUB_APP_ID }}
+          CD_REPO_GITHUB_APP_ID: ${{ vars.CD_REPO_GITHUB_APP_ID }}
           CD_REPO_GITHUB_APP_PRIVATE_KEY: ${{ secrets.CD_REPO_GITHUB_APP_PRIVATE_KEY }}
           ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
           ARGOCD_SERVER: ${{ vars.ARGOCD_SERVER }}
@@ -222,7 +223,7 @@ jobs:
             artifacts/release-source/sbom-*.spdx.json
             artifacts/release/image-metadata-*.json
 
-      - name: Resolve CD repository
+      - name: Resolve GitOps repository
         id: cd_repo
         env:
           CD_REPO_FULL_NAME: ${{ vars.CD_REPO_FULL_NAME }}
@@ -242,16 +243,16 @@ jobs:
           echo "name=${name}" >> "$GITHUB_OUTPUT"
           echo "full_name=${CD_REPO_FULL_NAME}" >> "$GITHUB_OUTPUT"
 
-      - name: Create CD repository app token
+      - name: Create os-config GitHub App token
         id: cd_token
         uses: actions/create-github-app-token@v2
         with:
-          app-id: ${{ secrets.CD_REPO_GITHUB_APP_ID }}
+          app-id: ${{ vars.CD_REPO_GITHUB_APP_ID }}
           private-key: ${{ secrets.CD_REPO_GITHUB_APP_PRIVATE_KEY }}
           owner: ${{ steps.cd_repo.outputs.owner }}
           repositories: ${{ steps.cd_repo.outputs.name }}
 
-      - name: Checkout CD repository
+      - name: Checkout os-config repository
         uses: actions/checkout@v6
         with:
           repository: ${{ steps.cd_repo.outputs.full_name }}
@@ -263,7 +264,7 @@ jobs:
       - name: Install Kustomize
         uses: imranismail/setup-kustomize@v3
 
-      - name: Promote release in CD repository
+      - name: Promote release in GitOps repository
         run: |
           scripts/release/promote-os-config.py \
             --repo-dir os-config \
@@ -309,7 +310,7 @@ jobs:
           ARGOCD_APP_NAMESPACE: ${{ vars.ARGOCD_APP_NAMESPACE }}
         run: |
           if [[ -z "$ARGOCD_AUTH_TOKEN" ]]; then
-            echo "Repository secret ARGOCD_AUTH_TOKEN must be configured." >&2
+            echo "Release environment secret ARGOCD_AUTH_TOKEN must be configured." >&2
             exit 1
           fi
           if [[ -z "$ARGOCD_SERVER" || -z "$ARGOCD_APP_NAME" ]]; then
