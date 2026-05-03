@@ -137,6 +137,19 @@ def app_revision(app):
     return sync.get("revision") or sync_result.get("revision") or ""
 
 
+def app_has_revision(app, revision):
+    if not revision:
+        return False
+    if app_revision(app) == revision:
+        return True
+
+    for entry in app.get("status", {}).get("history", []):
+        if entry.get("revision") == revision:
+            return True
+
+    return False
+
+
 def pod_digest_matches(pod, service, expected):
     statuses = pod.get("status", {}).get("containerStatuses", [])
     for status in statuses:
@@ -186,8 +199,10 @@ def evaluate(client, args, expected_services, app):
     sync_status = app.get("status", {}).get("sync", {}).get("status", "")
     health_status = app.get("status", {}).get("health", {}).get("status", "")
 
-    if revision != args.os_config_revision:
-        reasons.append(f"Argo CD revision is {revision or '<empty>'}, expected {args.os_config_revision}.")
+    if not app_has_revision(app, args.os_config_revision):
+        reasons.append(
+            f"Argo CD has not reported revision {args.os_config_revision} yet; current revision is {revision or '<empty>'}."
+        )
     if sync_status != "Synced":
         reasons.append(f"Argo CD sync status is {sync_status or '<empty>'}, expected Synced.")
     if health_status != "Healthy":
