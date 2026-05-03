@@ -10,7 +10,7 @@ The shipped image bytes and rendered manifests are reused from the reviewed PR b
 
 Release reruns are idempotent for a merged commit that already has a published release manifest: the workflow reuses that manifest and version instead of minting a second release.
 
-After image publication succeeds, release automation commits the matching Asterism release ref to the separate GitOps repository and adds pod-template annotations that force a rollout while deployments continue to reference `:latest`. Argo CD verification must confirm the app is synced and healthy and that running pod image IDs match the release manifest digests.
+After image publication succeeds, release automation commits the matching Asterism release ref to the separate GitOps repository and adds pod-template annotations that force a rollout while deployments continue to reference `:latest`. Argo CD auto-syncs from the GitOps change via its webhook path, and verification polls until the app is synced and healthy and the running pod image IDs match the release manifest digests.
 
 The release workflow runs in the GitHub Actions `release` environment. Store release-only credentials there so they are only exposed to the release job.
 
@@ -44,8 +44,8 @@ Consumers (GitOps automation, audit jobs, or promotion tooling) can parse this f
   - Repository variable: `CD_REPO_GITHUB_APP_ID`
 - Argo CD verification credential:
   - Environment secret: `ARGOCD_AUTH_TOKEN`
-  - The token user must have Argo CD read and sync access to the `apps` project so the verifier can fetch application status, resource trees, and request a sync when needed.
-  - At minimum, the local Argo CD account should be granted `applications, get` and `applications, sync` on `apps/*`.
+  - The token user must have Argo CD read access to the `apps` project so the verifier can fetch application status and resource trees.
+  - At minimum, the local Argo CD account should be granted `applications, get` on `apps/*`.
 - Repository variables:
   - `CD_REPO_FULL_NAME`, for example `jlfowle/os-config`
   - `ARGOCD_SERVER`
