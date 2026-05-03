@@ -103,6 +103,6 @@ These standards apply to both human contributors and AI agents working in Asteri
 
 ## 15. Asterism Change Workflow
 - For any change that modifies files in this repository, the default delivery path is branch-first and PR-first: create a dedicated branch, make signed commits, open a PR, and keep watching CI checks plus review comments until the PR is merge-ready.
-- Do not leave an Asterism PR in draft by default. Reserve draft status for intentionally incomplete work or when the user explicitly asks for a draft PR.
-- Once the expected checks are green and you are confident the change is complete, mark the PR ready for review before treating the work as finished.
+- Do not use draft PRs for Asterism. Open pull requests ready for review by default.
+- Once the expected checks are green and you are confident the change is complete, the PR should already be ready for review before the work is treated as finished.
 - If GitHub publication is not possible in the current environment, say so explicitly and stop at the local artifact rather than implying the PR flow has completed.
