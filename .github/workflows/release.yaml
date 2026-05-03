@@ -53,8 +53,20 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
+      # If this merge commit already has a published release, reuse that manifest and version instead of minting another one.
+      - name: Resolve release state
+        id: release_state
+        run: |
+          scripts/release/resolve-release-state.sh \
+            --repo "$REPOSITORY" \
+            --commit "$MERGE_COMMIT_SHA" \
+            --fallback-version "${{ steps.set_version.outputs.version }}" \
+            --manifest-path release-manifest.json \
+            --token "$GITHUB_TOKEN"
+
       - name: Discover release services
         id: inventory
+        if: steps.release_state.outputs.release_exists != 'true'
         working-directory: services
         run: |
           SERVICES=$(./inventory.sh)
@@ -88,9 +100,9 @@ jobs:
             exit 1
           fi
 
-      # Reuse the successful PR workflow run from the exact head SHA so the release stays tied to the reviewed build.
       - name: Locate source CI run
         id: source_run
+        if: steps.release_state.outputs.release_exists != 'true'
         run: |
           python3 <<'PY'
           import json
@@ -140,7 +152,9 @@ jobs:
           sys.exit(1)
           PY
 
+      # Reuse the successful PR workflow run from the exact head SHA so the release stays tied to the reviewed build.
       - name: Download build artifacts
+        if: steps.release_state.outputs.release_exists != 'true'
         uses: actions/download-artifact@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -151,6 +165,7 @@ jobs:
           path: artifacts/build
 
       - name: Normalize release source artifacts
+        if: steps.release_state.outputs.release_exists != 'true'
         env:
           EXPECTED_SERVICES_JSON: ${{ steps.inventory.outputs.containerized }}
         run: |
@@ -160,6 +175,7 @@ jobs:
             --expected-services-json "$EXPECTED_SERVICES_JSON"
 
       - name: Download rendered manifests
+        if: steps.release_state.outputs.release_exists != 'true'
         uses: actions/download-artifact@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -170,9 +186,11 @@ jobs:
           path: artifacts/rendered
 
       - name: Install Cosign
+        if: steps.release_state.outputs.release_exists != 'true'
         uses: sigstore/cosign-installer@v4.1.1
 
       - name: Log in to GHCR
+        if: steps.release_state.outputs.release_exists != 'true'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -181,16 +199,18 @@ jobs:
 
       # Auxiliary release metadata is assembled here because it does not change the shipped bits.
       - name: Publish images and record release metadata
+        if: steps.release_state.outputs.release_exists != 'true'
         env:
           EXPECTED_SERVICES_JSON: ${{ steps.inventory.outputs.containerized }}
         run: |
           scripts/release/publish-images.sh \
             --source artifacts/release-source \
             --release-dir artifacts/release \
-            --version "${{ steps.set_version.outputs.version }}" \
+            --version "${{ steps.release_state.outputs.version }}" \
             --expected-services-json "$EXPECTED_SERVICES_JSON"
 
       - name: Build release manifest
+        if: steps.release_state.outputs.release_exists != 'true'
         env:
           EXPECTED_SERVICES_JSON: ${{ steps.inventory.outputs.containerized }}
           SOURCE_CI_RUN_ID: ${{ steps.source_run.outputs.run_id }}
@@ -199,7 +219,7 @@ jobs:
           scripts/release/build-release-manifest.sh \
             --release-dir artifacts/release \
             --output release-manifest.json \
-            --version "${{ steps.set_version.outputs.version }}" \
+            --version "${{ steps.release_state.outputs.version }}" \
             --commit "${{ env.MERGE_COMMIT_SHA }}" \
             --expected-services-json "$EXPECTED_SERVICES_JSON"
 
@@ -210,10 +230,11 @@ jobs:
           echo "sha256=${digest}" >> "$GITHUB_OUTPUT"
 
       - name: Upload release assets
+        if: steps.release_state.outputs.release_exists != 'true'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ steps.set_version.outputs.version }}
-          name: ${{ steps.set_version.outputs.version }}
+          tag_name: ${{ steps.release_state.outputs.version }}
+          name: ${{ steps.release_state.outputs.version }}
           draft: false
           prerelease: false
           generate_release_notes: true
@@ -268,7 +289,7 @@ jobs:
         run: |
           scripts/release/promote-os-config.py \
             --repo-dir os-config \
-            --version "${{ steps.set_version.outputs.version }}" \
+            --version "${{ steps.release_state.outputs.version }}" \
             --source-repo "${{ github.repository }}" \
             --commit "${{ env.MERGE_COMMIT_SHA }}" \
             --manifest-sha256 "${{ steps.release_manifest.outputs.sha256 }}"
@@ -292,10 +313,10 @@ jobs:
           git -C os-config config user.email "asterism-release[bot]@users.noreply.github.com"
 
           if git -C os-config diff --quiet -- app/asterism/kustomization.yaml; then
-            echo "os-config already points at ${{ steps.set_version.outputs.version }}."
+            echo "os-config already points at ${{ steps.release_state.outputs.version }}."
           else
             git -C os-config add app/asterism/kustomization.yaml
-            git -C os-config commit -m "chore(asterism): promote ${{ steps.set_version.outputs.version }}"
+            git -C os-config commit -m "chore(asterism): promote ${{ steps.release_state.outputs.version }}"
             git -C os-config push origin HEAD:main
           fi
 
@@ -325,7 +346,7 @@ jobs:
             --project "$ARGOCD_PROJECT" \
             --namespace "$ARGOCD_APP_NAMESPACE" \
             --release-manifest release-manifest.json \
-            --release-version "${{ steps.set_version.outputs.version }}" \
+            --release-version "${{ steps.release_state.outputs.version }}" \
             --release-commit "${{ env.MERGE_COMMIT_SHA }}" \
             --manifest-sha256 "${{ steps.release_manifest.outputs.sha256 }}" \
             --os-config-revision "${{ steps.cd_commit.outputs.sha }}"
