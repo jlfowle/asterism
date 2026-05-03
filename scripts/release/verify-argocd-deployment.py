@@ -71,17 +71,6 @@ class ArgoClient:
             params["refresh"] = refresh
         return self.request("GET", f"/api/v1/applications/{urllib.parse.quote(app, safe='')}", params=params)
 
-    def sync_application(self, app, project="", revision=""):
-        body = {"prune": False, "dryRun": False}
-        if revision:
-            body["revision"] = revision
-        return self.request(
-            "POST",
-            f"/api/v1/applications/{urllib.parse.quote(app, safe='')}/sync",
-            params={"project": project},
-            body=body,
-        )
-
     def resource_tree(self, app, project=""):
         return self.request(
             "GET",
@@ -185,9 +174,8 @@ def deployment_ready(deployment):
     return False, f"{name} is not Available"
 
 
-def evaluate(client, args, expected_services):
+def evaluate(client, args, expected_services, app):
     reasons = []
-    app = client.get_application(args.app, args.project)
     namespace = args.namespace or app.get("spec", {}).get("destination", {}).get("namespace", "")
 
     if not namespace:
@@ -271,23 +259,12 @@ def main():
     client = ArgoClient(args.server, args.token)
 
     print(f"Refreshing Argo CD application {args.app}.")
-    client.get_application(args.app, args.project, refresh="hard")
-
-    try:
-        print(f"Requesting Argo CD sync for {args.app} at revision {args.os_config_revision}.")
-        client.sync_application(args.app, args.project, args.os_config_revision)
-    except RuntimeError as error:
-        text = str(error).lower()
-        if "another operation" in text or "operation is already in progress" in text:
-            print(f"Argo CD already has an operation in progress: {error}")
-        else:
-            raise
-
     deadline = time.monotonic() + args.timeout_seconds
     last_reasons = []
 
     while time.monotonic() < deadline:
-        ok, reasons = evaluate(client, args, expected_services)
+        app = client.get_application(args.app, args.project, refresh="hard")
+        ok, reasons = evaluate(client, args, expected_services, app)
         if ok:
             print("Argo CD deployment verification succeeded.")
             return
