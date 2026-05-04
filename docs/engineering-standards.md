@@ -12,6 +12,7 @@ These standards apply to both human contributors and AI agents working in Asteri
 - Domain and integration capabilities belong in services, not in Polaris.
 - Services may contribute UI resources, but Polaris remains the composition layer that discovers and renders them.
 - Frontend behavior should consume backend APIs rather than re-implement service logic in the browser.
+- Public traffic enters through the single Asterism host and Gateway API routing. Services expose internal APIs under `/api/v1/*` and service-owned UI assets under `/ui/*`; public paths are composed as `/api/services/{service}/...` and `/ui/services/{service}/...`.
 
 ## 3. API-First Contract Model
 - API-first is mandatory for every service.
@@ -46,6 +47,7 @@ These standards apply to both human contributors and AI agents working in Asteri
 - The Argo CD `Application` definitions live in a separate repository and are intentionally not managed here.
 - Manifests in this repository should remain GitOps-friendly and declarative.
 - Prefer OpenShift-native constructs when choosing between equivalent deployment options.
+- Do not expose Asterism workloads with direct per-service OpenShift Routes; use the shared mesh ingress and Gateway API route model.
 
 ## 7. Environment Strategy
 - There is only one deployed environment.

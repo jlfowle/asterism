@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "displayName": "UniFi Integration",
   "apiBasePath": "/api/services/unifi",
+  "uiBasePath": "/ui/services/unifi",
   "dashboardCard": {
     "title": "UniFi Status",
     "description": "Runtime-loaded card owned by the unifi service.",
     "statusEndpoint": "/api/v1/status",
-    "module": "/ui/dashboard-card.js",
+    "module": "/dashboard-card.js",
     "export": "createDashboardCard"
   }
 }

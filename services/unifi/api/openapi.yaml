@@ -3,7 +3,7 @@ info:
   title: unifi service API
   version: 0.1.0
 servers:
-  - url: https://api.example.internal/unifi
+  - url: https://asterism.apps.os.fowler.house/api/services/unifi
 components:
   securitySchemes:
     bearerAuth:

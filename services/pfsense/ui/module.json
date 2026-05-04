@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "displayName": "pfSense Integration",
   "apiBasePath": "/api/services/pfsense",
+  "uiBasePath": "/ui/services/pfsense",
   "dashboardCard": {
     "title": "pfSense Status",
     "description": "Runtime-loaded card owned by the pfsense service.",
     "statusEndpoint": "/api/v1/status",
-    "module": "/ui/dashboard-card.js",
+    "module": "/dashboard-card.js",
     "export": "createDashboardCard"
   }
 }

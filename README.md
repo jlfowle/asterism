@@ -32,6 +32,7 @@ Ports used by the local stack:
 - Event contracts: `services/*/api/asyncapi.yaml`
 - Deployment manifests: `services/*/deploy` (entrypoint: `kustomization.yaml`)
 - Consolidated deploy (auto-generated): `deploy/kustomization.yaml`
+- Public entry point: `https://asterism.apps.os.fowler.house/` via Gateway API HTTPRoutes
 - Platform security policy scaffolding: `deploy/platform/security`
 
 ## CI/CD

@@ -6,21 +6,21 @@ const FALLBACK_SERVICES = [
     displayName: "UniFi",
     description: "Wireless controller health and client telemetry.",
     statusApi: "/api/services/unifi/api/v1/status",
-    moduleManifest: "/api/services/unifi/ui/module.json",
+    moduleManifest: "/ui/services/unifi/module.json",
   },
   {
     id: "cluster",
     displayName: "OpenShift",
     description: "Cluster workload and node status from in-cluster APIs.",
     statusApi: "/api/services/cluster/api/v1/status",
-    moduleManifest: "/api/services/cluster/ui/module.json",
+    moduleManifest: "/ui/services/cluster/module.json",
   },
   {
     id: "pfsense",
     displayName: "pfSense",
     description: "Gateway availability and network edge insights.",
     statusApi: "/api/services/pfsense/api/v1/status",
-    moduleManifest: "/api/services/pfsense/ui/module.json",
+    moduleManifest: "/ui/services/pfsense/module.json",
   },
 ];
 
@@ -144,7 +144,7 @@ const enrichService = async (service) => {
         },
       ],
     };
-    const modulePath = joinServicePath(manifest?.apiBasePath, dashboardCard.module);
+    const modulePath = joinServicePath(manifest?.uiBasePath || manifest?.apiBasePath, dashboardCard.module);
     const card = await loadRuntimeCard(enrichedService, manifest, modulePath, fallbackCard);
 
     return {

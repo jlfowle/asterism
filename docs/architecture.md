@@ -14,6 +14,7 @@ This document summarizes the current platform direction. Repository-wide behavio
 - `services/unifi`, `services/cluster`, `services/pfsense`: Go API services with event envelope scaffolding.
 - `services/<service>/deploy`: Kubernetes deployment manifests (kustomization.yaml entrypoint + base/ directory).
 - `deploy/kustomization.yaml`: Auto-generated consolidated kustomization (auto-discovered via `scripts/update-deploy.sh`).
+- `deploy/platform/routing`: Gateway API HTTPRoutes for the single Asterism public entry point.
 - `deploy/platform/security`: Service Mesh mTLS and Cognito OIDC policy scaffolding.
 
 ## API And Event Contracts
@@ -27,6 +28,7 @@ This keeps contracts with implementation ownership and supports separate lifecyc
 - Polaris loads service registry data at runtime.
 - Services may expose service-owned UI resources and module manifests.
 - UI actions should interact through documented service APIs rather than bypassing backend contracts.
+- Public service APIs are routed under `/api/services/{service}/...`; service-owned UI assets are routed under `/ui/services/{service}/...`.
 
 ## Initial Integration Probes
 - `unifi`: probes `UNIFI_API_URL` with optional `UNIFI_API_TOKEN`.
@@ -40,6 +42,7 @@ This keeps contracts with implementation ownership and supports separate lifecyc
 - Internal service-to-service authentication and authorization are delegated to the service mesh using mTLS and mesh policy.
 - Secret material is sourced from AWS Secrets Manager through External Secrets Operator.
 - Protected service endpoints (`/api/v1/status`) require identity context by default (`AUTH_MODE=enforced`) and read forwarded principal/group headers (`X-Asterism-Principal`, `X-Asterism-Groups`).
+- External traffic enters through `https://asterism.apps.os.fowler.house/` and is routed by Service Mesh Gateway API resources rather than direct per-service OpenShift Routes.
 
 ## CI/CD And Supply Chain
 GitHub Actions pipeline includes:

@@ -3,7 +3,7 @@ info:
   title: pfsense service API
   version: 0.1.0
 servers:
-  - url: https://api.example.internal/pfsense
+  - url: https://asterism.apps.os.fowler.house/api/services/pfsense
 components:
   securitySchemes:
     bearerAuth:

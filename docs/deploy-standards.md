@@ -14,8 +14,7 @@ services/{service}/
 │   ├── kustomization.yaml          # Contract entrypoint for the consolidated deploy
 │   └── base/
 │       ├── deployment.yaml
-│       ├── service.yaml
-│       └── route.yaml              # OpenShift-specific Ingress
+│       └── service.yaml            # Internal ClusterIP service
 ├── Dockerfile                       # Required for service to be deployable
 ├── Makefile                         # Required for service to be deployable
 └── [other service files]
@@ -34,6 +33,7 @@ The root-level `deploy/` directory contains the consolidated kustomization and c
 deploy/
 ├── kustomization.yaml              # AUTO-GENERATED; references all services and platform policies
 ├── platform/
+│   ├── routing/                    # Gateway API HTTPRoutes for public app routing
 │   └── security/                   # Cross-cutting Istio and OIDC policies
 │       ├── authorization-policy.yaml
 │       ├── request-authentication.yaml
@@ -44,6 +44,7 @@ deploy/
 
 **Key Points:**
 - `deploy/kustomization.yaml` is **auto-generated** by `scripts/update-deploy.sh`; do not edit it manually
+- `deploy/platform/routing/` contains Asterism's Gateway API `HTTPRoute` resources for the single public entry point
 - `deploy/platform/security/` contains infrastructure cross-cutting concerns, not service-owned
 - The consolidation is a simple aggregation via kustomize resource references
 
@@ -70,15 +71,9 @@ runtime secret dependency.
 - Kubernetes Service (ClusterIP) exposing the Deployment
 - Port 80 (external/cluster port) → 8080 (container port)
 - Selector matches the deployment: `app.kubernetes.io/name: {service}`
-- No external traffic exposure from this manifest (Ingress via `route.yaml`)
+- No external traffic exposure from this manifest. Public traffic is attached through Gateway API routing in `deploy/platform/routing`.
 
-#### 3. `route.yaml`
-- OpenShift-specific Route (similar to Kubernetes Ingress)
-- Routes HTTP traffic to the Service on port 80
-- Hostname follows OpenShift ingress pattern (typically `{service}-asterism.{cluster}.openshiftapps.com`)
-- Insecure policy: `Redirect` (forces HTTPS when available)
-
-#### 4. `externalsecret.yaml`
+#### 3. `externalsecret.yaml`
 - Optional ExternalSecrets Operator CRD
 - Synchronizes secrets from AWS Secrets Manager (`ClusterSecretStore: aws-secretsmanager`)
 - Source key in Secrets Manager: `/asterism/{service}`
@@ -86,6 +81,18 @@ runtime secret dependency.
 - Auto-refresh interval: 1 hour
 - Include this file only when the service has sensitive runtime data that must
   be delivered through the secret manager
+
+### Public Routing Standard
+
+Asterism uses a single public host, `asterism.apps.os.fowler.house`, and Kubernetes Gateway API `HTTPRoute` resources. The shared `Gateway` and OpenShift exposure live in the GitOps `os-config` repository; this repository owns the app path routing.
+
+Service-owned surfaces are:
+- Internal API: `/api/v1/*`
+- Internal UI assets: `/ui/*`
+- Public API: `/api/services/{service}/api/v1/*`
+- Public UI: `/ui/services/{service}/*`
+
+Do not add per-service OpenShift `Route` resources for Asterism workloads. Direct routes bypass the intended mesh ingress path and can conflict with `STRICT` mTLS.
 
 ### Kustomization Configuration
 
@@ -102,7 +109,6 @@ References the required manifest files in relative paths:
 resources:
   - ./base/deployment.yaml
   - ./base/service.yaml
-  - ./base/route.yaml
 ```
 
 #### Image Configuration
@@ -167,6 +173,7 @@ resources:
   - ../services/pfsense/deploy
   - ../services/polaris/deploy
   - ../services/unifi/deploy
+  - platform/routing
   - platform/security
 ```
 
@@ -185,7 +192,7 @@ resources:
 **What the script does:**
 1. Scans `services/*/` for deployable services (checks for Dockerfile, Makefile, deploy/kustomization.yaml)
 2. Generates `deploy/kustomization.yaml` with `resources:` entries for each discovered service
-3. Adds `platform/security` reference for cross-cutting policies
+3. Adds `platform/routing` and `platform/security` references for cross-cutting policies
 4. Writes the file with auto-generated header comment
 5. Exits with code 0 (always succeeds; reports discoveries as informational)
 
@@ -218,7 +225,7 @@ cd deploy
 kustomize build .
 ```
 
-Should produce manifests for all services plus platform policies, all in the `asterism` namespace with appropriate labels.
+Should produce manifests for all services plus platform policies and HTTPRoutes, all in the `asterism` namespace with appropriate labels.
 
 ### Validate Service Discovery
 
@@ -265,6 +272,6 @@ If `git diff` shows no changes, the discovery is up to date. If changes exist, c
 ## References
 
 - [Kustomize Documentation](https://kustomize.io/)
-- [OpenShift Routes](https://docs.openshift.com/container-platform/latest/networking/routes/understanding-routes.html)
+- [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/)
 - [ExternalSecrets Operator](https://external-secrets.io/)
 - [Istio Injection](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/)

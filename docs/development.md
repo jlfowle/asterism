@@ -53,6 +53,11 @@ Each service owns its implementation, contracts, and deploy manifests:
 - `services/{service}/api/asyncapi.yaml`
 - `services/{service}/deploy/kustomization.yaml`
 
+Local Polaris proxies match the deployed public routing standard:
+
+- Service APIs: `/api/services/{service}/api/v1/*`
+- Service UI assets: `/ui/services/{service}/*`
+
 ## Adding Or Updating A Service
 
 1. Make the code change in the service directory.
@@ -65,8 +70,8 @@ Each service owns its implementation, contracts, and deploy manifests:
 ## Troubleshooting
 
 - If Polaris loads but cards do not render, verify the service is running on the
-  expected port and that the proxy path in `services/polaris/webpack.config.js`
-  still matches the service route.
+  expected port and that the API/UI proxy paths in `services/polaris/webpack.config.js`
+  still match the Gateway API routing standard.
 - If a Go service exits immediately in local development, check that
   `AUTH_MODE=disabled` is set and that any optional integration URL variables are
   blank.

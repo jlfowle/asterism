@@ -26,6 +26,14 @@ module.exports = {
         },
       },
       {
+        context: ["/ui/services/unifi"],
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+        pathRewrite: {
+          "^/ui/services/unifi": "/ui",
+        },
+      },
+      {
         context: ["/api/services/cluster"],
         target: "http://127.0.0.1:8082",
         changeOrigin: true,
@@ -34,11 +42,27 @@ module.exports = {
         },
       },
       {
+        context: ["/ui/services/cluster"],
+        target: "http://127.0.0.1:8082",
+        changeOrigin: true,
+        pathRewrite: {
+          "^/ui/services/cluster": "/ui",
+        },
+      },
+      {
         context: ["/api/services/pfsense"],
         target: "http://127.0.0.1:8083",
         changeOrigin: true,
         pathRewrite: {
           "^/api/services/pfsense": "",
+        },
+      },
+      {
+        context: ["/ui/services/pfsense"],
+        target: "http://127.0.0.1:8083",
+        changeOrigin: true,
+        pathRewrite: {
+          "^/ui/services/pfsense": "/ui",
         },
       },
     ],

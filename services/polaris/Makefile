@@ -1,21 +1,21 @@
-.PHONY: run build test lint clean
+.PHONY: run build test lint deps clean
 
-run: node_modules
+run: deps
 	yarn start
 
 build: dist/main.js
 
-dist/main.js: $(wildcard src/**/*.js) node_modules
+dist/main.js: $(wildcard src/**/*.js) deps
 	yarn build
 
-test: $(wildcard src/**/*.js) node_modules
+test: deps
 	yarn test
 
-lint: node_modules
+lint: deps
 	yarn lint
 
-node_modules:
-	test -d node_modules || yarn install
+deps:
+	yarn install --frozen-lockfile --check-files
 
 clean:
 	rm -rf dist coverage node_modules test-results

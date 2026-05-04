@@ -24,25 +24,26 @@ test("hydrates cards from service-owned module manifests", async () => {
               displayName: "UniFi",
               description: "Fallback description",
               statusApi: "/api/services/unifi/api/v1/status",
-              moduleManifest: "/api/services/unifi/ui/module.json",
+              moduleManifest: "/ui/services/unifi/module.json",
             },
           ],
         }),
       });
     }
 
-    if (url === "/api/services/unifi/ui/module.json") {
+    if (url === "/ui/services/unifi/module.json") {
       return Promise.resolve({
         ok: true,
         json: async () => ({
           service: "unifi",
           displayName: "UniFi Integration",
           apiBasePath: "/api/services/unifi",
+          uiBasePath: "/ui/services/unifi",
           dashboardCard: {
             title: "UniFi Status",
             description: "Runtime-loaded card owned by the unifi service.",
             statusEndpoint: "/api/v1/status",
-            module: "/ui/dashboard-card.js",
+            module: "/dashboard-card.js",
             export: "createDashboardCard",
           },
         }),

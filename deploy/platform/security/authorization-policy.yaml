@@ -1,13 +1,23 @@
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
-  name: asterism-default
+  name: asterism-api
 spec:
   selector:
     matchLabels:
       app.kubernetes.io/part-of: asterism
   action: ALLOW
   rules:
+    - to:
+        - operation:
+            paths:
+              - /healthz
+    - to:
+        - operation:
+            methods:
+              - GET
+            paths:
+              - /ui/*
     - from:
         - source:
             requestPrincipals:
@@ -15,5 +25,21 @@ spec:
       to:
         - operation:
             paths:
-              - /healthz
               - /api/*
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: polaris-shell
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: polaris
+  action: ALLOW
+  rules:
+    - to:
+        - operation:
+            methods:
+              - GET
+            paths:
+              - /*

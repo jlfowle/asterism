@@ -1,0 +1,98 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: asterism
+spec:
+  hostnames:
+    - asterism.apps.os.fowler.house
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: asterism
+      namespace: istio-ingress
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/services/unifi
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: unifi
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/services/cluster
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: cluster
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/services/pfsense
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: pfsense
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ui/services/unifi
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /ui
+      backendRefs:
+        - name: unifi
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ui/services/cluster
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /ui
+      backendRefs:
+        - name: cluster
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ui/services/pfsense
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /ui
+      backendRefs:
+        - name: pfsense
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: polaris
+          port: 80
