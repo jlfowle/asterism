@@ -266,7 +266,7 @@ jobs:
 
       - name: Create os-config GitHub App token
         id: cd_token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ vars.CD_REPO_GITHUB_APP_ID }}
           private-key: ${{ secrets.CD_REPO_GITHUB_APP_PRIVATE_KEY }}
