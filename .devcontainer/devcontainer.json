@@ -15,7 +15,7 @@
       "version": "os-provided",
       "ppa": false
     },
-    "ghcr.io/devcontainers/features/node:1.7.1": {
+    "ghcr.io/devcontainers/features/node:2.0.0": {
       "version": "22",
       "pnpmVersion": "none",
       "installYarnUsingApt": false
