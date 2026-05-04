@@ -10,6 +10,7 @@ on:
       - main
 
 permissions:
+  actions: read
   contents: read
   pull-requests: read
   security-events: write
@@ -89,6 +90,14 @@ jobs:
         with:
           go-version-file: services/${{ matrix.service.id }}/go.mod
 
+      - name: Initialize Go CodeQL
+        if: contains(toJson(matrix.service.tools), 'go')
+        uses: github/codeql-action/init@v4
+        with:
+          languages: go
+          build-mode: manual
+          config-file: ./.github/codeql/codeql-config.yml
+
       - name: Run tests
         working-directory: services/${{ matrix.service.id }}
         run: make test
@@ -100,6 +109,12 @@ jobs:
       - name: Run build
         working-directory: services/${{ matrix.service.id }}
         run: make build
+
+      - name: Analyze Go service with CodeQL
+        if: contains(toJson(matrix.service.tools), 'go')
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:go/${{ matrix.service.id }}
 
       - name: Scan service source with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
@@ -218,6 +233,33 @@ jobs:
 
       - name: Run release automation checks
         run: scripts/release/test-release-automation.sh
+
+  codeql-static:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - actions
+          - javascript-typescript
+          - python
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
 
   render-kustomize:
     name: Render Kustomize ${{ matrix.service.id }}

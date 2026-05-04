@@ -1,0 +1,15 @@
+name: Asterism CodeQL
+
+paths:
+  - .github/workflows
+  - scripts
+  - services
+
+paths-ignore:
+  - '**/.cache'
+  - '**/coverage'
+  - '**/coverage.out'
+  - '**/coverage.xml'
+  - '**/dist'
+  - '**/node_modules'
+  - '**/test-results'
