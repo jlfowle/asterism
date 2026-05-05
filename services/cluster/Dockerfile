@@ -1,6 +1,8 @@
 FROM golang:1.26-bookworm AS build
 
-WORKDIR /src
+COPY --from=pkg . /src/pkg
+
+WORKDIR /src/services/cluster
 COPY go.mod ./
 COPY . .
 

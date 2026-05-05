@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
-	"slices"
 	"strings"
+
+	"github.com/jlfowle/asterism/pkg/authz"
 )
 
 type contextKey string
@@ -15,6 +17,7 @@ const principalContextKey contextKey = "principal"
 type AuthMiddleware struct {
 	mode          string
 	requiredGroup string
+	authorizer    authz.Authorizer
 }
 
 func NewAuthMiddlewareFromEnv() AuthMiddleware {
@@ -28,6 +31,7 @@ func NewAuthMiddlewareFromEnv() AuthMiddleware {
 	return AuthMiddleware{
 		mode:          mode,
 		requiredGroup: requiredGroup,
+		authorizer:    authz.NewAuthorizer(requiredGroup),
 	}
 }
 
@@ -46,8 +50,13 @@ func (a AuthMiddleware) Protect(next http.Handler) http.Handler {
 
 		if a.requiredGroup != "" {
 			groups := a.readGroups(r)
-			if !slices.Contains(groups, a.requiredGroup) {
-				http.Error(w, "missing required group", http.StatusForbidden)
+			allowed, reason, err := a.authorizer.IsAllowed(r.Context(), principal, groups, r.URL.Path, r.Method)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("authorization error: %v", err), http.StatusInternalServerError)
+				return
+			}
+			if !allowed {
+				http.Error(w, reason, http.StatusForbidden)
 				return
 			}
 		}

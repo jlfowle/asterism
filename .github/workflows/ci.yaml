@@ -176,6 +176,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}-${{ matrix.service.id }}:${{ needs.metadata.outputs.version }}
           outputs: type=docker,dest=${{ runner.temp }}/image-${{ matrix.service.id }}.tar
+          build-contexts: pkg=pkg
           build-args: |
             VERSION=${{ needs.metadata.outputs.version }}
             BUILD_DATE=${{ github.event.pull_request.updated_at || github.run_id }}
