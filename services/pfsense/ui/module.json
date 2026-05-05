@@ -5,9 +5,10 @@
   "apiBasePath": "/api/services/pfsense",
   "uiBasePath": "/ui/services/pfsense",
   "dashboardCard": {
-    "title": "pfSense Status",
-    "description": "Runtime-loaded card owned by the pfsense service.",
+    "title": "pfSense Gateway",
+    "description": "Firewall and gateway status from read-only pfSense SNMP.",
     "statusEndpoint": "/api/v1/status",
+    "actionsEndpoint": "/api/v1/actions",
     "module": "/dashboard-card.js",
     "export": "createDashboardCard"
   }

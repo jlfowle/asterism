@@ -4,6 +4,8 @@ namespace: asterism
 resources:
   - ./base/deployment.yaml
   - ./base/service.yaml
+  - ./base/serviceaccount.yaml
+  - ./base/rbac.yaml
 images:
   - name: cluster
     newName: ghcr.io/jlfowle/asterism-cluster

@@ -29,8 +29,36 @@ spec:
               value: "enforced"
             - name: AUTH_REQUIRED_GROUP
               value: ""
-            - name: PFSENSE_API_URL
-              value: ""
+            - name: PFSENSE_SNMP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: pfsense-secrets
+                  key: snmpHost
+                  optional: true
+            - name: PFSENSE_SNMP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: pfsense-secrets
+                  key: snmpPort
+                  optional: true
+            - name: PFSENSE_SNMP_COMMUNITY
+              valueFrom:
+                secretKeyRef:
+                  name: pfsense-secrets
+                  key: snmpCommunity
+                  optional: true
+            - name: PFSENSE_CONSOLE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pfsense-secrets
+                  key: consoleUrl
+                  optional: true
+            - name: PFSENSE_EXPECTED_UP_INTERFACES
+              valueFrom:
+                secretKeyRef:
+                  name: pfsense-secrets
+                  key: expectedUpInterfaces
+                  optional: true
           livenessProbe:
             httpGet:
               path: /healthz

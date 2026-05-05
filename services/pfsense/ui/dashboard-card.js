@@ -4,7 +4,7 @@ export function createDashboardCard({ title, description, statusApi }) {
     description,
     links: [
       {
-        label: "View status API",
+        label: "Status API",
         href: statusApi,
       },
     ],

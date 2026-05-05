@@ -10,6 +10,72 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    GuidedAction:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        risk:
+          type: string
+        enabled:
+          type: boolean
+        requiresApproval:
+          type: boolean
+        auditEvent:
+          type: string
+    IntegrationSnapshot:
+      type: object
+      properties:
+        configured:
+          type: boolean
+        reachable:
+          type: boolean
+        endpoint:
+          type: string
+        message:
+          type: string
+        httpStatus:
+          type: integer
+        latencyMs:
+          type: integer
+        observedAt:
+          type: string
+          format: date-time
+        severity:
+          type: string
+          enum: [ok, warning, critical, unknown]
+        degradedReasons:
+          type: array
+          items:
+            type: string
+        recommendedActions:
+          type: array
+          items:
+            type: string
+        authoritativeLinks:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              href:
+                type: string
+        controls:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuidedAction'
+        metrics:
+          type: object
+          additionalProperties: true
+        summary:
+          type: object
+          additionalProperties: true
 paths:
   /healthz:
     get:
@@ -37,23 +103,64 @@ paths:
                   principal:
                     type: string
                   integration:
-                    type: object
-                    properties:
-                      configured:
-                        type: boolean
-                      reachable:
-                        type: boolean
-                      endpoint:
-                        type: string
-                      message:
-                        type: string
-                      httpStatus:
-                        type: integer
-                      latencyMs:
-                        type: integer
-                      metrics:
-                        type: object
-                        additionalProperties: true
+                    $ref: '#/components/schemas/IntegrationSnapshot'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          description: Missing identity context
+        '403':
+          description: Authenticated but not authorized
+  /api/v1/summary:
+    get:
+      summary: Return read-only pfSense operator summary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current operator summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  status:
+                    type: string
+                  principal:
+                    type: string
+                  integration:
+                    $ref: '#/components/schemas/IntegrationSnapshot'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          description: Missing identity context
+        '403':
+          description: Authenticated but not authorized
+  /api/v1/actions:
+    get:
+      summary: Return available guided action contracts
+      description: Actions are advertised for UX and automation planning only; this endpoint does not mutate pfSense.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Guided action catalog
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  principal:
+                    type: string
+                  actions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GuidedAction'
                   timestamp:
                     type: string
                     format: date-time

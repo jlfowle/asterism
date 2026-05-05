@@ -33,6 +33,8 @@ func (h Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("/ui/", http.StripPrefix("/ui/", http.FileServer(http.FS(uiassets.Files))))
 	mux.HandleFunc("/healthz", h.healthz)
 	mux.Handle("/api/v1/status", h.auth.Protect(http.HandlerFunc(h.status)))
+	mux.Handle("/api/v1/summary", h.auth.Protect(http.HandlerFunc(h.status)))
+	mux.Handle("/api/v1/actions", h.auth.Protect(http.HandlerFunc(h.actions)))
 }
 
 func (h Handler) healthz(w http.ResponseWriter, _ *http.Request) {
@@ -48,6 +50,24 @@ func (h Handler) status(w http.ResponseWriter, r *http.Request) {
 		Principal:   principalFromContext(r.Context()),
 		Integration: integration.Probe(r.Context()),
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (h Handler) actions(w http.ResponseWriter, r *http.Request) {
+	resp := struct {
+		Service   string                `json:"service"`
+		Principal string                `json:"principal,omitempty"`
+		Actions   []integration.Control `json:"actions"`
+		Timestamp string                `json:"timestamp"`
+	}{
+		Service:   h.serviceName,
+		Principal: principalFromContext(r.Context()),
+		Actions:   integration.Actions(),
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 
 	w.Header().Set("Content-Type", "application/json")

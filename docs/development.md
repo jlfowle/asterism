@@ -25,6 +25,12 @@ The local run mode disables application auth and leaves integration endpoints
 unset unless you override them, which keeps the stack usable without cloud or
 home-network credentials.
 
+The default local integrations report "not configured". To test real read-only upstreams, set:
+
+- `UNIFI_API_BASE_URL`, `UNIFI_API_TOKEN`, and optionally `UNIFI_SITE_ID`
+- `PFSENSE_SNMP_HOST`, `PFSENSE_SNMP_COMMUNITY`, and optionally `PFSENSE_EXPECTED_UP_INTERFACES`
+- `CLUSTER_API_URL` when running the Cluster service with an available service account token and CA
+
 ## Common Commands
 
 - `make test` runs the service test suite for all services.
@@ -52,6 +58,8 @@ Each service owns its implementation, contracts, and deploy manifests:
 - `services/{service}/api/openapi.yaml`
 - `services/{service}/api/asyncapi.yaml`
 - `services/{service}/deploy/kustomization.yaml`
+
+Integration services expose `/api/v1/status`, `/api/v1/summary`, and `/api/v1/actions`. The action endpoint is a read-only contract catalog; it does not mutate backend systems.
 
 Local Polaris proxies match the deployed public routing standard:
 

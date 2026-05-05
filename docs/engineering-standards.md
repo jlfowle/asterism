@@ -13,6 +13,7 @@ These standards apply to both human contributors and AI agents working in Asteri
 - Services may contribute UI resources, but Polaris remains the composition layer that discovers and renders them.
 - Frontend behavior should consume backend APIs rather than re-implement service logic in the browser.
 - Public traffic enters through the single Asterism host and Gateway API routing. Services expose internal APIs under `/api/v1/*` and service-owned UI assets under `/ui/*`; public paths are composed as `/api/services/{service}/...` and `/ui/services/{service}/...`.
+- Asterism should expose approachable status, diagnostics, and narrow guided controls without replacing backend systems as the source of truth for their own configuration.
 
 ## 3. API-First Contract Model
 - API-first is mandatory for every service.

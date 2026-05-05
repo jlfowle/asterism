@@ -81,6 +81,12 @@ runtime secret dependency.
 - Auto-refresh interval: 1 hour
 - Include this file only when the service has sensitive runtime data that must
   be delivered through the secret manager
+- The platform/GitOps layer must provide `ClusterSecretStore/aws-secretsmanager`; service manifests reference it but do not define cloud credentials.
+
+Current service secret shapes:
+
+- `/asterism/unifi`: `apiBaseUrl`, `apiToken`, optional `siteId`, optional `consoleUrl`
+- `/asterism/pfsense`: `snmpHost`, `snmpCommunity`, optional `snmpPort`, optional `consoleUrl`, optional `expectedUpInterfaces`
 
 ### Public Routing Standard
 

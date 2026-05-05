@@ -13,6 +13,14 @@ type statusTestResponse struct {
 	Principal string `json:"principal"`
 }
 
+type actionsTestResponse struct {
+	Service string `json:"service"`
+	Actions []struct {
+		ID      string `json:"id"`
+		Enabled bool   `json:"enabled"`
+	} `json:"actions"`
+}
+
 func TestHealthz(t *testing.T) {
 	h := NewHandler("pfsense")
 	mux := http.NewServeMux()
@@ -77,7 +85,8 @@ func TestStatusUnauthorizedWhenMissingPrincipal(t *testing.T) {
 func TestStatusAuthorizedWithPrincipal(t *testing.T) {
 	t.Setenv("AUTH_MODE", "enforced")
 	t.Setenv("AUTH_REQUIRED_GROUP", "")
-	t.Setenv("PFSENSE_API_URL", "")
+	t.Setenv("PFSENSE_SNMP_HOST", "")
+	t.Setenv("PFSENSE_SNMP_COMMUNITY", "")
 
 	h := NewHandler("pfsense")
 	mux := http.NewServeMux()
@@ -104,5 +113,39 @@ func TestStatusAuthorizedWithPrincipal(t *testing.T) {
 
 	if payload.Principal != "test-user" {
 		t.Fatalf("expected principal %q, got %q", "test-user", payload.Principal)
+	}
+}
+
+func TestActionsAuthorizedWithPrincipal(t *testing.T) {
+	t.Setenv("AUTH_MODE", "enforced")
+	t.Setenv("AUTH_REQUIRED_GROUP", "")
+
+	h := NewHandler("pfsense")
+	mux := http.NewServeMux()
+	h.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/actions", nil)
+	req.Header.Set("X-Asterism-Principal", "test-user")
+
+	res := httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", res.Code)
+	}
+
+	var payload actionsTestResponse
+	if err := json.Unmarshal(res.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("failed to unmarshal actions response: %v", err)
+	}
+
+	if payload.Service != "pfsense" {
+		t.Fatalf("expected service %q, got %q", "pfsense", payload.Service)
+	}
+	if len(payload.Actions) == 0 {
+		t.Fatalf("expected guided action contracts")
+	}
+	if payload.Actions[0].Enabled {
+		t.Fatalf("expected guided actions to be disabled in observe-first milestone")
 	}
 }
