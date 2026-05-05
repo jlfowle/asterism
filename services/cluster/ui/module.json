@@ -5,9 +5,10 @@
   "apiBasePath": "/api/services/cluster",
   "uiBasePath": "/ui/services/cluster",
   "dashboardCard": {
-    "title": "Cluster Status",
-    "description": "Runtime-loaded card owned by the cluster service.",
+    "title": "OpenShift Cluster",
+    "description": "Node, workload, operator, and GitOps status from read-only cluster APIs.",
     "statusEndpoint": "/api/v1/status",
+    "actionsEndpoint": "/api/v1/actions",
     "module": "/dashboard-card.js",
     "export": "createDashboardCard"
   }

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: polaris-oidc-config
+data:
+  oidc-config.json: |
+    {
+      "enabled": false,
+      "issuer": "",
+      "clientId": "",
+      "authorizationEndpoint": "",
+      "tokenEndpoint": "",
+      "logoutEndpoint": "",
+      "scopes": ["openid", "profile", "email"]
+    }

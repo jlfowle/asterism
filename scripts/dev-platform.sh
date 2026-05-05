@@ -34,9 +34,9 @@ start_service() {
 
 trap cleanup EXIT INT TERM
 
-start_service unifi PORT=8081 AUTH_MODE=disabled UNIFI_API_URL=
+start_service unifi PORT=8081 AUTH_MODE=disabled UNIFI_API_BASE_URL= UNIFI_SITE_ID=default
 start_service cluster PORT=8082 AUTH_MODE=disabled CLUSTER_API_URL=
-start_service pfsense PORT=8083 AUTH_MODE=disabled PFSENSE_API_URL=
+start_service pfsense PORT=8083 AUTH_MODE=disabled PFSENSE_SNMP_HOST= PFSENSE_SNMP_COMMUNITY=
 start_service polaris
 
 printf '%s\n' 'Local platform is running.'

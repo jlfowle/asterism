@@ -29,8 +29,30 @@ spec:
               value: "enforced"
             - name: AUTH_REQUIRED_GROUP
               value: ""
-            - name: UNIFI_API_URL
-              value: ""
+            - name: UNIFI_API_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: unifi-secrets
+                  key: apiBaseUrl
+                  optional: true
+            - name: UNIFI_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: unifi-secrets
+                  key: apiToken
+                  optional: true
+            - name: UNIFI_SITE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: unifi-secrets
+                  key: siteId
+                  optional: true
+            - name: UNIFI_CONSOLE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: unifi-secrets
+                  key: consoleUrl
+                  optional: true
           livenessProbe:
             httpGet:
               path: /healthz

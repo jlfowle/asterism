@@ -15,6 +15,7 @@ spec:
       annotations:
         sidecar.istio.io/inject: "true"
     spec:
+      serviceAccountName: cluster
       containers:
         - name: cluster
           image: cluster
@@ -31,6 +32,10 @@ spec:
               value: ""
             - name: CLUSTER_API_URL
               value: "https://kubernetes.default.svc/version"
+            - name: CLUSTER_CONSOLE_URL
+              value: ""
+            - name: ARGOCD_CONSOLE_URL
+              value: ""
           livenessProbe:
             httpGet:
               path: /healthz

@@ -11,9 +11,15 @@ Home control center platform using microservices (Go), a runtime-composed microf
 
 ## Services
 - `polaris`: host shell UI and runtime microfrontend registry client.
-- `unifi`: UniFi integration service scaffold.
-- `cluster`: OpenShift integration service scaffold.
-- `pfsense`: pfSense integration service scaffold.
+- `unifi`: read-only UniFi Network status from the local Network API.
+- `cluster`: read-only OpenShift and Argo CD status from least-privilege cluster APIs.
+- `pfsense`: read-only pfSense gateway status through SNMP.
+
+## Operator Cockpit Direction
+- Asterism is an approachable operations layer for people who should not need to be experts in UniFi, pfSense, OpenShift, or Argo CD.
+- Backend systems remain the authorities for their own configuration.
+- Asterism exposes status, plain-language diagnostics, authoritative links, and guided action contracts without storing shadow configuration.
+- Mutating controls are intentionally disabled until they can be implemented as narrow, audited, backend-owned actions.
 
 ## Local Development
 1. `make dev`

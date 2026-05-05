@@ -4,6 +4,7 @@ namespace: asterism
 resources:
   - ./base/deployment.yaml
   - ./base/service.yaml
+  - ./base/externalsecret.yaml
 images:
   - name: unifi
     newName: ghcr.io/jlfowle/asterism-unifi
