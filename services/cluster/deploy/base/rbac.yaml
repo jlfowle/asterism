@@ -1,30 +1,10 @@
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: asterism-cluster-readonly
-rules:
-  - apiGroups: [""]
-    resources: ["nodes", "namespaces", "pods", "services"]
-    verbs: ["get", "list"]
-  - apiGroups: ["apps"]
-    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
-    verbs: ["get", "list"]
-  - apiGroups: ["config.openshift.io"]
-    resources: ["clusterversions", "clusteroperators"]
-    verbs: ["get", "list"]
-  - apiGroups: ["argoproj.io"]
-    resources: ["applications"]
-    verbs: ["get", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: asterism-cluster-readonly
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: asterism-cluster-readonly
-subjects:
-  - kind: ServiceAccount
-    name: cluster
-    namespace: asterism
+  name: asterism-cluster-rbac-moved
+  namespace: asterism
+data:
+  note: |
+    The cluster-scoped ClusterRole/ClusterRoleBinding previously lived here.
+    Cluster-scoped RBAC must be owned and applied from the platform repo (os-config).
+    See os-config/cluster/asterism-rbac/asterism-cluster-readonly.yaml for the moved resource.

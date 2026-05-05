@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -288,6 +289,23 @@ func ProbeWithConfig(ctx context.Context, cfg Config) Snapshot {
 		clusterVersion = clusterVersionResp.Items[0].Status.Desired.Version
 	}
 	reasons := degradedReasons(nodeResp, healthyNodes, unhealthyPods, availableDeployments, totalDeploymentReplicas, deploymentsErr, operatorIssues, appsErr, appIssues, nodesErr, podsErr, operatorsErr)
+
+	// Run SelfSubjectAccessReview checks to ensure the mounted service account
+	// has the expected read permissions for cluster resources used by the service.
+	ssrChecks := []ssrCheck{
+		{Verb: "get", Resource: "nodes", APIGroup: "", Namespace: ""},
+		{Verb: "list", Resource: "pods", APIGroup: "", Namespace: ""},
+		{Verb: "list", Resource: "namespaces", APIGroup: "", Namespace: ""},
+		{Verb: "list", Resource: "deployments", APIGroup: "apps", Namespace: ""},
+		{Verb: "get", Resource: "clusterversions", APIGroup: "config.openshift.io", Namespace: ""},
+		{Verb: "list", Resource: "clusteroperators", APIGroup: "config.openshift.io", Namespace: ""},
+		{Verb: "list", Resource: "applications", APIGroup: "argoproj.io", Namespace: "openshift-gitops"},
+	}
+
+	ssrReasons := runSelfSubjectAccessReviews(ctx, client, apiRoot, ssrChecks, tokenBytes)
+	if len(ssrReasons) > 0 {
+		reasons = append(reasons, ssrReasons...)
+	}
 	severity := "ok"
 	message := "OpenShift API is reachable."
 	if len(reasons) > 0 {
@@ -546,6 +564,110 @@ func degradedReasons(nodes nodeListPayload, readyNodes int, unhealthyPods int, a
 	} else if appIssues > 0 {
 		reasons = append(reasons, fmt.Sprintf("%d Argo CD application(s) are not healthy and synced.", appIssues))
 	}
+	return reasons
+}
+
+type ssrCheck struct {
+	Verb      string
+	Resource  string
+	APIGroup  string
+	Namespace string
+}
+
+type ssrSpec struct {
+	Kind       string `json:"kind"`
+	APIVersion string `json:"apiVersion"`
+	Spec       struct {
+		ResourceAttributes struct {
+			Namespace string `json:"namespace,omitempty"`
+			Verb      string `json:"verb,omitempty"`
+			Group     string `json:"group,omitempty"`
+			Resource  string `json:"resource,omitempty"`
+			Name      string `json:"name,omitempty"`
+		} `json:"resourceAttributes"`
+	} `json:"spec"`
+}
+
+type ssrResponse struct {
+	Status struct {
+		Allowed bool   `json:"allowed"`
+		Reason  string `json:"reason"`
+	} `json:"status"`
+}
+
+func postJSON[T any](ctx context.Context, client *http.Client, requestURL string, token []byte, body any) (T, int, error) {
+	var zero T
+
+	requestCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	buf := &bytes.Buffer{}
+	if err := json.NewEncoder(buf).Encode(body); err != nil {
+		return zero, 0, err
+	}
+
+	req, err := http.NewRequestWithContext(requestCtx, http.MethodPost, requestURL, buf)
+	if err != nil {
+		return zero, 0, err
+	}
+	req.Header.Set("Authorization", "Bearer "+string(token))
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return zero, 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		return zero, resp.StatusCode, fmt.Errorf("upstream returned status %d", resp.StatusCode)
+	}
+
+	var payload T
+	if decodeErr := json.NewDecoder(resp.Body).Decode(&payload); decodeErr != nil {
+		return zero, resp.StatusCode, decodeErr
+	}
+
+	return payload, resp.StatusCode, nil
+}
+
+func runSelfSubjectAccessReviews(ctx context.Context, client *http.Client, apiRoot string, checks []ssrCheck, token []byte) []string {
+	reasons := make([]string, 0)
+	endpoint := apiRoot + "/apis/authorization.k8s.io/v1/selfsubjectaccessreviews"
+
+	for _, c := range checks {
+		payload := ssrSpec{Kind: "SelfSubjectAccessReview", APIVersion: "authorization.k8s.io/v1"}
+		payload.Spec.ResourceAttributes.Verb = c.Verb
+		payload.Spec.ResourceAttributes.Resource = c.Resource
+		payload.Spec.ResourceAttributes.Group = c.APIGroup
+		if c.Namespace != "" {
+			payload.Spec.ResourceAttributes.Namespace = c.Namespace
+		}
+
+		_, status, err := postJSON[ssrResponse](ctx, client, endpoint, token, payload)
+		if err != nil {
+			reasons = append(reasons, fmt.Sprintf("SelfSubjectAccessReview failed for %s %s: %v", c.Verb, c.Resource, err))
+			continue
+		}
+		if status < 200 || status >= 400 {
+			reasons = append(reasons, fmt.Sprintf("SelfSubjectAccessReview returned %d for %s %s", status, c.Verb, c.Resource))
+			continue
+		}
+
+		// Note: postJSON already returns decode result into typed var, but we ignored it above.
+		// Do a second request to get the payload (simpler to reuse typed return here).
+		payloadResp, _, err := postJSON[ssrResponse](ctx, client, endpoint, token, payload)
+		if err != nil {
+			reasons = append(reasons, fmt.Sprintf("SelfSubjectAccessReview decode failed for %s %s: %v", c.Verb, c.Resource, err))
+			continue
+		}
+
+		if !payloadResp.Status.Allowed {
+			reasons = append(reasons, fmt.Sprintf("Service account missing permission: %s %s", c.Verb, c.Resource))
+		}
+	}
+
 	return reasons
 }
 
