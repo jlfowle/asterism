@@ -76,7 +76,7 @@ runtime secret dependency.
 #### 3. `externalsecret.yaml`
 - Optional ExternalSecrets Operator CRD
 - Synchronizes secrets from AWS Secrets Manager (`ClusterSecretStore: aws-secretsmanager`)
-- Source key in Secrets Manager: `/asterism/{service}`
+- Logical source key in service manifests: `/asterism/{service}`
 - Target secret name: `{service}-secrets`
 - Auto-refresh interval: 1 hour
 - Include this file only when the service has sensitive runtime data that must
@@ -87,6 +87,8 @@ Current service secret shapes:
 
 - `/asterism/unifi`: `apiBaseUrl`, `apiToken`, optional `siteId`, optional `consoleUrl`
 - `/asterism/pfsense`: `snmpHost`, `snmpCommunity`, optional `snmpPort`, optional `consoleUrl`, optional `expectedUpInterfaces`
+
+The platform `ClusterSecretStore` may prepend a shared provider prefix such as `/os`, so the logical service keys above stay stable even if the AWS secret path is stored as `/os/asterism/{service}`.
 
 ### Public Routing Standard
 
