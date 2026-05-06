@@ -3,3 +3,4 @@ kind: Kustomization
 namespace: asterism
 resources:
   - httproute.yaml
+  - internal-httproute.yaml
