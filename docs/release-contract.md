@@ -2,15 +2,15 @@
 
 Each GitHub release includes:
 - `release-manifest.json`
-- `*.yaml` Kustomize rendered manifests
+- `asterism-deploy.yaml`
 - `sbom-*.spdx.json`
 - `image-metadata-*.json`
 
-The shipped image bytes and rendered manifests are reused from the reviewed PR build. Release publication loads those PR-built image archives, pushes immutable `vX.Y.Z` tags and the moving `latest` deployment tags, signs each immutable image digest, and fails if any expected service is missing an image archive, SBOM, digest, or metadata entry.
+The shipped image bytes are reused from the reviewed PR build. Release publication loads those PR-built image archives, pushes immutable `vX.Y.Z` tags and the moving `latest` deployment tags, signs each immutable image digest, and then renders `asterism-deploy.yaml` with image references pinned to `vX.Y.Z@sha256:...`. Release publication fails if any expected service is missing an image archive, SBOM, digest, metadata entry, or deployable manifest.
 
 Release reruns are idempotent for a merged commit that already has a published release manifest: the workflow reuses that manifest and version instead of minting a second release.
 
-After image publication succeeds, release automation commits the matching Asterism release ref to the separate GitOps repository and adds pod-template annotations that force a rollout while deployments continue to reference `:latest`. Argo CD auto-syncs from the GitOps change via its webhook path, and verification polls until the app is synced and healthy and the running pod image IDs match the release manifest digests.
+After image publication succeeds, release automation commits an `os-config` Kustomize pointer to the GitHub release asset, and that asset already contains the pod-template annotations and digest-pinned image references needed for rollout. Argo CD auto-syncs from the GitOps change via its webhook path, and verification polls until the app is synced and healthy and the running pod image IDs match the release manifest digests.
 
 The release workflow runs in the GitHub Actions `release` environment. Store release-only credentials there so they are only exposed to the release job.
 
@@ -37,6 +37,15 @@ The release workflow runs in the GitHub Actions `release` environment. Store rel
 ```
 
 Consumers (GitOps automation, audit jobs, or promotion tooling) can parse this file without scraping release notes.
+
+## asterism-deploy.yaml
+This release asset is the deployable manifest for `app-asterism`. It is rendered from the repo's `deploy/` tree after image publication and contains:
+- `namespace: app-asterism`
+- `app: asterism` labels
+- release annotations for version, commit, and manifest digest
+- image references in `ghcr.io/...:vX.Y.Z@sha256:...` form
+
+The GitOps repository should point its Asterism overlay at this asset rather than at the source `deploy/` tree.
 
 ## Required Release Configuration
 - GitHub App credentials used by the release workflow to update the private GitOps repository (`os-config`):

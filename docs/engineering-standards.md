@@ -53,8 +53,8 @@ These standards apply to both human contributors and AI agents working in Asteri
 ## 7. Environment Strategy
 - There is only one deployed environment.
 - That environment is promoted from the `main` branch only.
-- Deployment consumes `latest` tags produced from successful `main` builds.
-- Even with a `latest` deployment strategy, releases should preserve traceability through versioning, digests, provenance, and SBOM metadata.
+- Successful `main` builds continue to publish `latest` tags for compatibility and rollback simplicity.
+- Release-published deployment manifests must pin images as `version@sha256:...` so the deployed payload is traceable and immutable.
 
 ## 8. CI Expectations
 - CI is implemented in GitHub Actions.
@@ -69,7 +69,7 @@ These standards apply to both human contributors and AI agents working in Asteri
 - Build outputs that become part of the shipped release should be produced once from the reviewed PR commit and reused for release publication.
 - Auxiliary metadata may be assembled or regenerated at release time when that simplifies the workflow, provided the release still points back to the reviewed commit and the PR-built payload.
 - Container releases must publish both immutable release tags and the moving `latest` deployment tags, record pushed digests, sign immutable digests, and preserve SBOM metadata.
-- Release artifacts should be machine-readable where practical to support audit, promotion, and GitOps automation.
+- Release artifacts should be machine-readable where practical to support audit, promotion, and GitOps automation; when a deployment manifest is published as a release asset, it should pin images as `version@sha256:...`.
 - GitOps promotion should update the separate deployment repository only after release images and release metadata are complete, and post-promotion verification should confirm Argo CD sync, health, rollout, and running image digests.
 
 ## 10. Repository Working Agreements
