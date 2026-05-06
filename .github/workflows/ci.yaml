@@ -149,6 +149,22 @@ jobs:
             services/${{ matrix.service.id }}/test-results
             services/${{ matrix.service.id }}/test-results/results.json
 
+  authz:
+    name: Verify pkg/authz
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: pkg/authz/go.mod
+
+      - name: Run tests
+        working-directory: pkg/authz
+        run: go test ./...
+
   containers:
     # The PR build is the source of truth for release publication; this job only packages artifacts.
     name: Build Container ${{ matrix.service.id }}
