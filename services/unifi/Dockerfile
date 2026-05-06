@@ -1,6 +1,9 @@
 FROM golang:1.26-bookworm AS build
 
-COPY --from=pkg . /src/pkg
+WORKDIR /src
+
+# Copy the pkg directory from the named build context
+COPY --from=pkg . ./pkg
 
 WORKDIR /src/services/unifi
 COPY go.mod ./
