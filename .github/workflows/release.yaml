@@ -218,13 +218,21 @@ jobs:
           digest="$(sha256sum release-manifest.json | awk '{print $1}')"
           echo "sha256=${digest}" >> "$GITHUB_OUTPUT"
 
+      - name: Checkout reviewed merge commit
+        if: steps.release_state.outputs.release_exists != 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.MERGE_COMMIT_SHA }}
+          path: source-tree
+          fetch-depth: 0
+
       - name: Render release deployment asset
         if: steps.release_state.outputs.release_exists != 'true'
         env:
           RELEASE_MANIFEST_SHA256: ${{ steps.release_manifest.outputs.sha256 }}
         run: |
           scripts/release/render-release-deploy.sh \
-            --source-dir deploy \
+            --source-dir source-tree/deploy \
             --release-manifest release-manifest.json \
             --manifest-sha256 "$RELEASE_MANIFEST_SHA256" \
             --output artifacts/release/asterism-deploy.yaml
