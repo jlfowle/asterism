@@ -1,6 +1,27 @@
 const ModuleFederationPlugin = require("webpack/lib/container/ModuleFederationPlugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const fs = require("fs");
 const path = require("path");
+
+const emitPublicAsset = (assetName, sourcePath) => ({
+  apply(compiler) {
+    compiler.hooks.thisCompilation.tap("EmitPublicAsset", (compilation) => {
+      compilation.hooks.processAssets.tap(
+        {
+          name: "EmitPublicAsset",
+          stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS,
+        },
+        () => {
+          const contents = fs.readFileSync(sourcePath, "utf8");
+          compilation.emitAsset(
+            assetName,
+            new compiler.webpack.sources.RawSource(contents),
+          );
+        },
+      );
+    });
+  },
+});
 
 module.exports = {
   entry: "./src/index.js",
@@ -89,6 +110,10 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "./public/index.html",
     }),
+    emitPublicAsset(
+      "microfrontends.json",
+      path.resolve(__dirname, "public/microfrontends.json"),
+    ),
     new ModuleFederationPlugin({
       name: "polaris",
       shared: {
