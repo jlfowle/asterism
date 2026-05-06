@@ -59,6 +59,76 @@ manifest="$TMP_DIR/release-manifest.json"
 jq -e '.services | length == 1' "$manifest" > /dev/null
 jq -e '.services[0].digest == "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"' "$manifest" > /dev/null
 
+render_repo="$TMP_DIR/render-repo"
+mkdir -p "$render_repo/deploy/base"
+cat > "$render_repo/deploy/base/deployment.yaml" <<'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pfsense
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pfsense
+      app.kubernetes.io/part-of: asterism
+  template:
+    metadata:
+      annotations: {}
+      labels:
+        app.kubernetes.io/name: pfsense
+        app.kubernetes.io/part-of: asterism
+    spec:
+      containers:
+        - name: pfsense
+          image: pfsense
+EOF
+cat > "$render_repo/deploy/base/service.yaml" <<'EOF'
+apiVersion: v1
+kind: Service
+metadata:
+  name: pfsense
+spec:
+  selector:
+    app.kubernetes.io/name: pfsense
+    app.kubernetes.io/part-of: asterism
+EOF
+cat > "$render_repo/deploy/kustomization.yaml" <<'EOF'
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: asterism
+resources:
+  - ./base/deployment.yaml
+  - ./base/service.yaml
+images:
+  - name: pfsense
+    newName: ghcr.io/jlfowle/asterism-pfsense
+    newTag: latest
+labels:
+  - pairs:
+      app.kubernetes.io/name: pfsense
+      app.kubernetes.io/part-of: asterism
+    includeSelectors: true
+    includeTemplates: true
+EOF
+
+render_output="$TMP_DIR/asterism-deploy.yaml"
+"$SCRIPT_DIR/render-release-deploy.sh" \
+  --source-dir "$render_repo/deploy" \
+  --release-manifest "$manifest" \
+  --manifest-sha256 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
+  --output "$render_output"
+
+grep -q 'ghcr.io/jlfowle/asterism-pfsense:v1.2.3@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' "$render_output"
+grep -q 'asterism.dev/release-version: v1.2.3' "$render_output"
+grep -q 'asterism.dev/release-commit: abcdef0123456789' "$render_output"
+grep -q 'asterism.dev/release-manifest-sha256:' "$render_output"
+grep -q 'namespace: app-asterism' "$render_output"
+if grep -q ':latest' "$render_output"; then
+  echo "render-release-deploy.sh unexpectedly left a latest tag in the release manifest." >&2
+  exit 1
+fi
+
 if "$SCRIPT_DIR/build-release-manifest.sh" --release-dir "$TMP_DIR" --output "$TMP_DIR/empty.json" --version v1.2.3 --commit abc --expected-services-json "$expected" >/dev/null 2>&1; then
   echo "build-release-manifest.sh unexpectedly succeeded without image metadata." >&2
   exit 1
@@ -126,21 +196,19 @@ EOF
 "$SCRIPT_DIR/promote-os-config.py" \
   --repo-dir "$cd_repo" \
   --version v1.2.3 \
-  --source-repo jlfowle/asterism \
-  --commit abcdef0123456789 \
-  --manifest-sha256 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+  --source-repo jlfowle/asterism
 
-grep -q 'github.com/jlfowle/asterism//deploy?ref=v1.2.3' "$cd_repo/app/asterism/kustomization.yaml"
-grep -q 'asterism.dev~1release-version' "$cd_repo/app/asterism/kustomization.yaml"
-grep -q '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' "$cd_repo/app/asterism/kustomization.yaml"
+grep -q 'https://github.com/jlfowle/asterism/releases/download/v1.2.3/asterism-deploy.yaml' "$cd_repo/app/asterism/kustomization.yaml"
+if grep -q 'release-version' "$cd_repo/app/asterism/kustomization.yaml"; then
+  echo "promote-os-config.py should not inject deployment annotations." >&2
+  exit 1
+fi
 
 before_sha="$(sha256sum "$cd_repo/app/asterism/kustomization.yaml" | awk '{print $1}')"
 "$SCRIPT_DIR/promote-os-config.py" \
   --repo-dir "$cd_repo" \
   --version v1.2.3 \
-  --source-repo jlfowle/asterism \
-  --commit abcdef0123456789 \
-  --manifest-sha256 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+  --source-repo jlfowle/asterism
 after_sha="$(sha256sum "$cd_repo/app/asterism/kustomization.yaml" | awk '{print $1}')"
 
 if [[ "$before_sha" != "$after_sha" ]]; then

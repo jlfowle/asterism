@@ -60,11 +60,11 @@ GitHub Actions pipeline includes:
 - PR-built container archives, release-time GHCR push for immutable `vX.Y.Z` and moving `latest` tags,
 - keyless image signing and SBOM generation,
 - release automation in the GitHub Actions `release` environment with environment-scoped release credentials,
-- GitHub Release assets including rendered Kustomize manifests and machine-readable release metadata.
+- GitHub Release assets including a deployable `asterism-deploy.yaml` manifest and machine-readable release metadata.
 
 ## GitOps Flow
 1. CI validates pull requests and uploads release-source image archives, SBOMs, metadata, and rendered manifests.
-2. Release reuses the successful PR artifacts for the exact reviewed head SHA, publishes immutable and `latest` image tags, signs digests, and creates the release manifest.
-3. Release automation commits the new Asterism release ref and rollout annotations to the separate GitOps repository.
+2. Release reuses the successful PR artifacts for the exact reviewed head SHA, publishes immutable and `latest` image tags, signs digests, creates the release manifest, and renders `asterism-deploy.yaml` with `vX.Y.Z@sha256:...` image refs.
+3. Release automation commits the GitOps pointer to the GitHub release asset in the separate deployment repository.
 4. OpenShift GitOps reconciles the deployed environment from the GitOps repository.
 5. Release verification polls Argo CD until the application is synced, healthy, rolled out, and running the expected image digests.

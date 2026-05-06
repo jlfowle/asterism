@@ -174,17 +174,6 @@ jobs:
             --dest artifacts/release-source \
             --expected-services-json "$EXPECTED_SERVICES_JSON"
 
-      - name: Download rendered manifests
-        if: steps.release_state.outputs.release_exists != 'true'
-        uses: actions/download-artifact@v8
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          run-id: ${{ steps.source_run.outputs.run_id }}
-          pattern: rendered-*
-          merge-multiple: true
-          path: artifacts/rendered
-
       - name: Install Cosign
         if: steps.release_state.outputs.release_exists != 'true'
         uses: sigstore/cosign-installer@v4.1.1
@@ -229,6 +218,25 @@ jobs:
           digest="$(sha256sum release-manifest.json | awk '{print $1}')"
           echo "sha256=${digest}" >> "$GITHUB_OUTPUT"
 
+      - name: Checkout reviewed merge commit
+        if: steps.release_state.outputs.release_exists != 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.MERGE_COMMIT_SHA }}
+          path: source-tree
+          fetch-depth: 0
+
+      - name: Render release deployment asset
+        if: steps.release_state.outputs.release_exists != 'true'
+        env:
+          RELEASE_MANIFEST_SHA256: ${{ steps.release_manifest.outputs.sha256 }}
+        run: |
+          scripts/release/render-release-deploy.sh \
+            --source-dir source-tree/deploy \
+            --release-manifest release-manifest.json \
+            --manifest-sha256 "$RELEASE_MANIFEST_SHA256" \
+            --output artifacts/release/asterism-deploy.yaml
+
       - name: Upload release assets
         if: steps.release_state.outputs.release_exists != 'true'
         uses: softprops/action-gh-release@v3
@@ -240,7 +248,7 @@ jobs:
           generate_release_notes: true
           files: |
             release-manifest.json
-            artifacts/rendered/*.yaml
+            artifacts/release/asterism-deploy.yaml
             artifacts/release-source/sbom-*.spdx.json
             artifacts/release/image-metadata-*.json
 
@@ -290,9 +298,7 @@ jobs:
           scripts/release/promote-os-config.py \
             --repo-dir os-config \
             --version "${{ steps.release_state.outputs.version }}" \
-            --source-repo "${{ github.repository }}" \
-            --commit "${{ env.MERGE_COMMIT_SHA }}" \
-            --manifest-sha256 "${{ steps.release_manifest.outputs.sha256 }}"
+            --source-repo "${{ github.repository }}"
 
       - name: Validate promoted GitOps overlay
         run: |
