@@ -68,6 +68,7 @@ runtime secret dependency.
   - `AUTH_MODE=enforced`
   - `AUTHZ_OPA_URL=http://asterism-opa:8181` when the service uses shared OPA-backed authorization
   - Service-specific environment variables (e.g., `CLUSTER_API_URL` for services that need it)
+- The pod template metadata must include an `annotations` map, even when it starts empty, so release metadata overlays can inject immutable release annotations without failing
 - Security context: non-root user, read-only root filesystem, no Linux capabilities
 - Istio sidecar injection enabled (via label `sidecar.istio.io/inject: "true"`)
 
