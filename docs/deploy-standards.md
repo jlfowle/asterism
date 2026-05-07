@@ -52,6 +52,7 @@ deploy/
 - The auth proxy upstream should target the in-cluster `polaris` Service, not the public or internal ingress hostname, so login callbacks do not bounce through an extra edge hop
 - When oauth-proxy fronts Polaris, disable `--pass-host-header` so the upstream hop uses the shell service Host header. The browser host header can trigger Istio to reject the request with a 503/reset even when the shell pod itself is healthy.
 - When the auth proxy runs behind the OpenShift edge route without a mounted serving cert, it must set `--https-address=` so oauth-proxy stays HTTP-only and does not crash while loading TLS config
+- Polaris' Nginx config in `services/polaris/default.conf` reverse proxies the public `/api/services/{service}/...` and `/ui/services/{service}/...` prefixes to the service pods after the auth-proxy front door so the browser stays on the single Asterism host while service auth still sees proxy-provided identity headers.
 - The consolidation is a simple aggregation via kustomize resource references
 
 ## Service Deploy Manifest Requirements

@@ -58,10 +58,6 @@ const severityLabel = (severity) => {
   return "pending";
 };
 
-const authHeaders = (auth) => (
-  auth?.authorizationHeader ? { Authorization: auth.authorizationHeader } : {}
-);
-
 const buildFallbackCard = (service) => ({
   title: service.displayName,
   description: service.description,
@@ -191,7 +187,7 @@ const enrichService = async (service) => {
   }
 };
 
-const MainContent = ({ auth = { ready: true, enabled: false } }) => {
+const MainContent = ({ onPrincipalChange }) => {
   const [services, setServices] = useState(() => (
     FALLBACK_SERVICES.map((service) => ({
       ...service,
@@ -239,19 +235,6 @@ const MainContent = ({ auth = { ready: true, enabled: false } }) => {
     if (typeof fetch !== "function") {
       return;
     }
-    if (!auth.ready) {
-      return;
-    }
-    if (auth.enabled && !auth.authenticated) {
-      setStatusByService(Object.fromEntries(services.map((service) => [
-        service.id,
-        {
-          state: STATUS_STATE.ERROR,
-          error: "Sign in required",
-        },
-      ])));
-      return;
-    }
 
     let isMounted = true;
 
@@ -264,10 +247,11 @@ const MainContent = ({ auth = { ready: true, enabled: false } }) => {
       }));
 
       try {
-        const response = await fetch(service.statusApi, {
+        const statusApi = service.statusApi;
+        // Status requests stay on the authenticated public origin and are forwarded to the service pods by Polaris.
+        const response = await fetch(statusApi, {
           headers: {
             Accept: "application/json",
-            ...authHeaders(auth),
           },
         });
 
@@ -298,6 +282,14 @@ const MainContent = ({ auth = { ready: true, enabled: false } }) => {
             payload,
           },
         }));
+
+        if (
+          typeof onPrincipalChange === "function"
+          && typeof payload?.principal === "string"
+          && payload.principal.trim() !== ""
+        ) {
+          onPrincipalChange(payload.principal.trim());
+        }
       } catch (error) {
         if (!isMounted) {
           return;
@@ -320,7 +312,7 @@ const MainContent = ({ auth = { ready: true, enabled: false } }) => {
     return () => {
       isMounted = false;
     };
-  }, [services, auth.ready, auth.enabled, auth.authenticated, auth.authorizationHeader]);
+  }, [services, onPrincipalChange]);
 
   const liveCount = useMemo(() => {
     const entries = Object.values(statusByService);

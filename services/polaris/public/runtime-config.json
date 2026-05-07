@@ -1,0 +1,5 @@
+{
+  "edgeAuthEnabled": false,
+  "modeLabel": "Local development",
+  "signOutPath": "/oauth/sign_out"
+}
