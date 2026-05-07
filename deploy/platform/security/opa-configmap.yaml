@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: asterism-opa-config
+data:
+  opa-config.yaml: |
+    decision_logs:
+      console: true
+  policy.rego: |
+    package asterism.authz
+
+    default allow := false
+
+    allow if {
+      input.principal != ""
+      input.verb == "GET"
+      input.resource == "/api/v1/status"
+    }
+
+    allow if {
+      input.principal != ""
+      input.verb == "GET"
+      input.resource == "/api/v1/summary"
+    }
+
+    allow if {
+      input.principal != ""
+      input.verb == "GET"
+      input.resource == "/api/v1/actions"
+    }

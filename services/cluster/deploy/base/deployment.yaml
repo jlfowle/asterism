@@ -30,6 +30,8 @@ spec:
               value: "enforced"
             - name: AUTH_REQUIRED_GROUP
               value: ""
+            - name: AUTHZ_OPA_URL
+              value: "http://asterism-opa:8181"
             - name: CLUSTER_API_URL
               value: "https://kubernetes.default.svc/version"
             - name: CLUSTER_CONSOLE_URL

@@ -129,6 +129,37 @@ def decode_resource_payload(payload):
     raise ValueError(f"Could not find a live resource payload in response keys: {sorted(payload.keys())}")
 
 
+def pod_controller_name(client, app, project, namespace, pod):
+    owner_cache = {}
+    owners = pod.get("metadata", {}).get("ownerReferences", [])
+    for owner in owners:
+        if owner.get("kind") == "Deployment" and owner.get("name"):
+            return owner["name"]
+
+        if owner.get("kind") != "ReplicaSet" or not owner.get("name"):
+            continue
+
+        rs_name = owner["name"]
+        if rs_name not in owner_cache:
+            rs_payload = client.resource(
+                app,
+                project,
+                "apps",
+                "v1",
+                "ReplicaSet",
+                namespace,
+                rs_name,
+            )
+            owner_cache[rs_name] = decode_resource_payload(rs_payload)
+        replica_set = owner_cache[rs_name]
+
+        for rs_owner in replica_set.get("metadata", {}).get("ownerReferences", []):
+            if rs_owner.get("kind") == "Deployment" and rs_owner.get("name"):
+                return rs_owner["name"]
+
+    return None
+
+
 def app_revision(app):
     status = app.get("status", {})
     sync = status.get("sync", {})
@@ -223,8 +254,7 @@ def evaluate(client, args, expected_services, app):
             reasons.append(f"Could not inspect Pod {node['name']}: {error}")
             continue
 
-        labels = pod.get("metadata", {}).get("labels", {})
-        service = labels.get("app.kubernetes.io/name")
+        service = pod_controller_name(client, args.app, args.project, namespace, pod)
         if service in pods_by_service:
             pods_by_service[service].append(pod)
 

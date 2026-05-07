@@ -3,5 +3,7 @@ kind: Kustomization
 namespace: asterism
 resources:
   - peer-authentication.yaml
-  - request-authentication.yaml
   - authorization-policy.yaml
+  - opa-configmap.yaml
+  - opa-deployment.yaml
+  - opa-service.yaml

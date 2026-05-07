@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +20,17 @@ type actionsTestResponse struct {
 		ID      string `json:"id"`
 		Enabled bool   `json:"enabled"`
 	} `json:"actions"`
+}
+
+type stubAuthorizer struct {
+	allow bool
+}
+
+func (s stubAuthorizer) IsAllowed(ctx context.Context, principal string, groups []string, resource string, verb string) (bool, string, error) {
+	if s.allow {
+		return true, "", nil
+	}
+	return false, "denied", nil
 }
 
 func TestHealthz(t *testing.T) {
@@ -93,7 +105,8 @@ func TestStatusAuthorizedWithPrincipal(t *testing.T) {
 	h.RegisterRoutes(mux)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
-	req.Header.Set("X-Asterism-Principal", "test-user")
+	req.Header.Set("X-Asterism-Principal", "spoofed-user")
+	req.Header.Set("X-Forwarded-User", "test-user")
 
 	res := httptest.NewRecorder()
 	mux.ServeHTTP(res, req)
@@ -125,7 +138,7 @@ func TestActionsAuthorizedWithPrincipal(t *testing.T) {
 	h.RegisterRoutes(mux)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/actions", nil)
-	req.Header.Set("X-Asterism-Principal", "test-user")
+	req.Header.Set("X-Forwarded-Email", "test-user")
 
 	res := httptest.NewRecorder()
 	mux.ServeHTTP(res, req)
@@ -147,5 +160,30 @@ func TestActionsAuthorizedWithPrincipal(t *testing.T) {
 	}
 	if payload.Actions[0].Enabled {
 		t.Fatalf("expected guided actions to be disabled in observe-first milestone")
+	}
+}
+
+func TestStatusDeniedWhenOPARejectsWithoutRequiredGroup(t *testing.T) {
+	t.Setenv("AUTH_MODE", "enforced")
+	t.Setenv("AUTH_REQUIRED_GROUP", "")
+	t.Setenv("AUTHZ_OPA_URL", "http://example.invalid")
+
+	middleware := NewAuthMiddlewareFromEnv()
+	if !middleware.opaEnabled {
+		t.Fatalf("expected opaEnabled to be true when AUTHZ_OPA_URL is configured")
+	}
+	middleware.authorizer = stubAuthorizer{allow: false}
+
+	handler := middleware.Protect(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
+	req.Header.Set("X-Forwarded-User", "test-user")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 when OPA rejects access without required group, got %d", res.Code)
 	}
 }

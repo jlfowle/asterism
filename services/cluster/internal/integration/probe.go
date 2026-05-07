@@ -70,6 +70,10 @@ type Config struct {
 	ArgoCDURL  string
 }
 
+type HTTPDoer interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type versionPayload struct {
 	GitVersion string `json:"gitVersion"`
 }
@@ -160,6 +164,10 @@ func Probe(ctx context.Context) Snapshot {
 	return ProbeWithConfig(ctx, ConfigFromEnv())
 }
 
+func ProbeWithConfig(ctx context.Context, cfg Config) Snapshot {
+	return ProbeWithClient(ctx, nil, cfg)
+}
+
 func ConfigFromEnv() Config {
 	return Config{
 		Endpoint:   strings.TrimSpace(os.Getenv("CLUSTER_API_URL")),
@@ -170,7 +178,7 @@ func ConfigFromEnv() Config {
 	}
 }
 
-func ProbeWithConfig(ctx context.Context, cfg Config) Snapshot {
+func ProbeWithClient(ctx context.Context, client HTTPDoer, cfg Config) Snapshot {
 	observedAt := time.Now().UTC().Format(time.RFC3339)
 	if cfg.Endpoint == "" {
 		return Snapshot{
@@ -217,26 +225,28 @@ func ProbeWithConfig(ctx context.Context, cfg Config) Snapshot {
 		}
 	}
 
-	caPool, caErr := readClusterCA(cfg)
-	if caErr != nil {
-		return Snapshot{
-			Configured:         true,
-			Reachable:          false,
-			Endpoint:           cfg.Endpoint,
-			Message:            fmt.Sprintf("Invalid OpenShift API CA: %v", caErr),
-			ObservedAt:         observedAt,
-			Severity:           "critical",
-			DegradedReasons:    []string{"The Cluster service cannot validate the Kubernetes API certificate."},
-			RecommendedActions: []string{"Verify the service account CA bundle is mounted into the pod."},
-			Controls:           Actions(),
+	if client == nil {
+		caPool, caErr := readClusterCA(cfg)
+		if caErr != nil {
+			return Snapshot{
+				Configured:         true,
+				Reachable:          false,
+				Endpoint:           cfg.Endpoint,
+				Message:            fmt.Sprintf("Invalid OpenShift API CA: %v", caErr),
+				ObservedAt:         observedAt,
+				Severity:           "critical",
+				DegradedReasons:    []string{"The Cluster service cannot validate the Kubernetes API certificate."},
+				RecommendedActions: []string{"Verify the service account CA bundle is mounted into the pod."},
+				Controls:           Actions(),
+			}
 		}
-	}
 
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{RootCAs: caPool},
-		},
+		client = &http.Client{
+			Timeout: 5 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{RootCAs: caPool},
+			},
+		}
 	}
 
 	startedAt := time.Now()
@@ -427,7 +437,7 @@ func deriveURLs(endpoint string) (apiRoot string, versionURL string, err error) 
 	return apiRoot, versionURL, nil
 }
 
-func getJSON[T any](ctx context.Context, client *http.Client, requestURL string, token []byte) (T, int, error) {
+func getJSON[T any](ctx context.Context, client HTTPDoer, requestURL string, token []byte) (T, int, error) {
 	var zero T
 
 	requestCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -595,7 +605,7 @@ type ssrResponse struct {
 	} `json:"status"`
 }
 
-func postJSON[T any](ctx context.Context, client *http.Client, requestURL string, token []byte, body any) (T, int, error) {
+func postJSON[T any](ctx context.Context, client HTTPDoer, requestURL string, token []byte, body any) (T, int, error) {
 	var zero T
 
 	requestCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -632,7 +642,7 @@ func postJSON[T any](ctx context.Context, client *http.Client, requestURL string
 	return payload, resp.StatusCode, nil
 }
 
-func runSelfSubjectAccessReviews(ctx context.Context, client *http.Client, apiRoot string, checks []ssrCheck, token []byte) []string {
+func runSelfSubjectAccessReviews(ctx context.Context, client HTTPDoer, apiRoot string, checks []ssrCheck, token []byte) []string {
 	reasons := make([]string, 0)
 	endpoint := apiRoot + "/apis/authorization.k8s.io/v1/selfsubjectaccessreviews"
 
