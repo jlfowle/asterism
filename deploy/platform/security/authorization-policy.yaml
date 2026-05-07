@@ -24,14 +24,14 @@ spec:
               - cluster.local/ns/istio-ingress/sa/default
         - source:
             principals:
-              - cluster.local/ns/asterism/sa/default
+              - cluster.local/ns/app-asterism/sa/default
     - from:
         - source:
             principals:
               - cluster.local/ns/istio-ingress/sa/default
         - source:
             principals:
-              - cluster.local/ns/asterism/sa/default
+              - cluster.local/ns/app-asterism/sa/default
       to:
         - operation:
             methods:
