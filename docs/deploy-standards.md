@@ -50,6 +50,7 @@ deploy/
 - `deploy/platform/security/` contains infrastructure cross-cutting concerns, not service-owned
 - The public host is fronted by the Polaris auth proxy deployment in `services/polaris/deploy/base/auth-proxy-*`; it owns the OpenShift OAuth edge and forwards trusted user identity into Polaris and downstream APIs
 - The auth proxy upstream should target the in-cluster `polaris` Service, not the public or internal ingress hostname, so login callbacks do not bounce through an extra edge hop
+- When oauth-proxy fronts Polaris, disable `--pass-host-header` so the upstream hop uses the shell service Host header. The browser host header can trigger Istio to reject the request with a 503/reset even when the shell pod itself is healthy.
 - When the auth proxy runs behind the OpenShift edge route without a mounted serving cert, it must set `--https-address=` so oauth-proxy stays HTTP-only and does not crash while loading TLS config
 - The consolidation is a simple aggregation via kustomize resource references
 
