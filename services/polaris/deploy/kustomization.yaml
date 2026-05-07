@@ -5,6 +5,9 @@ resources:
   - ./base/deployment.yaml
   - ./base/service.yaml
   - ./base/oidc-configmap.yaml
+  - ./base/auth-proxy-serviceaccount.yaml
+  - ./base/auth-proxy-deployment.yaml
+  - ./base/auth-proxy-service.yaml
 images:
   - name: polaris
     newName: ghcr.io/jlfowle/asterism-polaris

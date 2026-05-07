@@ -231,5 +231,8 @@ export const signOut = (config) => {
       logout_uri: redirectUri(),
     });
     window.location.assign(`${config.logoutEndpoint}?${params.toString()}`);
+    return;
   }
+
+  window.location.assign("/oauth/sign_out");
 };

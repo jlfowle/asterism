@@ -8,7 +8,6 @@ import {
   disabledAuthState,
   loadOidcConfig,
   signOut,
-  startSignIn,
 } from "./auth";
 import "./App.css";
 
@@ -50,12 +49,6 @@ const App = () => {
     };
   }, []);
 
-  const handleSignIn = () => {
-    startSignIn(authConfig).catch(() => {
-      setAuth(buildAuthState(authConfig, null, "Sign-in could not be started."));
-    });
-  };
-
   const handleSignOut = () => {
     signOut(authConfig);
     setAuth(buildAuthState(authConfig, null));
@@ -63,7 +56,7 @@ const App = () => {
 
   return (
     <div className="dashboard-layout">
-      <Topbar auth={auth} onSignIn={handleSignIn} onSignOut={handleSignOut} />
+      <Topbar auth={auth} onSignOut={handleSignOut} />
       <div className="dashboard-body">
         <Sidebar />
         <MainContent auth={auth} />

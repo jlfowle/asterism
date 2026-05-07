@@ -18,14 +18,37 @@ spec:
               - GET
             paths:
               - /ui/*
+      from:
+        - source:
+            principals:
+              - cluster.local/ns/istio-ingress/sa/default
     - from:
         - source:
-            requestPrincipals:
-              - '*'
+            principals:
+              - cluster.local/ns/istio-ingress/sa/default
       to:
         - operation:
+            methods:
+              - GET
             paths:
               - /api/*
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: asterism-auth-proxy
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: auth-proxy
+  action: ALLOW
+  rules:
+    - to:
+        - operation:
+            methods:
+              - GET
+            paths:
+              - /*
 ---
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy

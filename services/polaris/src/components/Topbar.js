@@ -4,16 +4,13 @@ const authLabel = (auth) => {
   if (!auth?.ready) {
     return "Checking identity";
   }
-  if (!auth.enabled) {
-    return "Sign-in not configured";
-  }
   if (auth.authenticated) {
     return auth.principal || "Signed in";
   }
-  return "Sign-in required";
+  return "OpenShift SSO";
 };
 
-const Topbar = ({ auth, onSignIn, onSignOut }) => (
+const Topbar = ({ auth, onSignOut }) => (
   <header className="topbar">
     <div>
       <p className="eyebrow">Asterism Control Plane</p>
@@ -22,11 +19,8 @@ const Topbar = ({ auth, onSignIn, onSignOut }) => (
     </div>
     <div className="identity-panel">
       <span className="status-pill">{authLabel(auth)}</span>
-      {auth?.enabled && auth.authenticated && (
+      {auth?.ready && (
         <button type="button" onClick={onSignOut}>Sign out</button>
-      )}
-      {auth?.enabled && !auth.authenticated && (
-        <button type="button" onClick={onSignIn}>Sign in</button>
       )}
     </div>
   </header>
