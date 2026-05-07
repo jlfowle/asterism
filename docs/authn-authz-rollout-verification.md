@@ -13,9 +13,11 @@ This checklist is the working verification plan for the OpenShift OAuth edge pro
 
 - [ ] Unauthenticated `GET /` reaches the OpenShift login gate through oauth-proxy
 - [ ] Authenticated `GET /` renders the Polaris shell
+- [ ] Authenticated `GET /` does not return a 503 or upstream reset from oauth-proxy
 - [ ] Sign-out returns through the OpenShift OAuth logout path
 - [ ] Public requests use `GET`, not `HEAD`, when checking the routed edge behavior
 - [ ] `asterism-internal.apps.os.fowler.house` serves the Polaris shell without routing back through the auth proxy
+- [ ] oauth-proxy forwards the shell service Host header upstream, not the public browser host
 
 ## Service Authorization Checks
 
