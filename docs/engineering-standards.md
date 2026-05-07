@@ -26,9 +26,10 @@ These standards apply to both human contributors and AI agents working in Asteri
 ## 4. Authentication And Authorization
 
 ### External traffic
-- User authentication is delegated through OpenID Connect with AWS Cognito.
-- User authorization is handled in the application.
-- Service endpoints should consume verified identity context and enforce authorization decisions in service code where user-facing access is concerned.
+- User authentication is delegated through the OpenShift OAuth edge proxy.
+- User authorization is handled in the application and may be backed by OPA for shared policy decisions.
+- Service endpoints should consume verified identity context from the proxy and enforce authorization decisions in service code where user-facing access is concerned.
+- Only trust proxy-provided identity headers such as `X-Forwarded-User` and `X-Forwarded-Email`; do not trust client-supplied principal headers.
 
 ### Internal traffic
 - Service-to-service authentication and authorization are delegated to the service mesh.
@@ -48,6 +49,7 @@ These standards apply to both human contributors and AI agents working in Asteri
 - The Argo CD `Application` definitions live in a separate repository and are intentionally not managed here.
 - Manifests in this repository should remain GitOps-friendly and declarative.
 - Prefer OpenShift-native constructs when choosing between equivalent deployment options.
+- The public edge auth front door lives with Polaris in `services/polaris/deploy/base/auth-proxy-*` and should route through the shared mesh ingress rather than exposing direct per-service Routes.
 - Do not expose Asterism workloads with direct per-service OpenShift Routes; use the shared mesh ingress and Gateway API route model.
 
 ## 7. Environment Strategy

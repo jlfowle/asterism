@@ -22,7 +22,7 @@ This document summarizes the current platform direction. Repository-wide behavio
 - `services/<service>/deploy`: Kubernetes deployment manifests (kustomization.yaml entrypoint + base/ directory).
 - `deploy/kustomization.yaml`: Auto-generated consolidated kustomization (auto-discovered via `scripts/update-deploy.sh`).
 - `deploy/platform/routing`: Gateway API HTTPRoutes for the single Asterism public entry point.
-- `deploy/platform/security`: Service Mesh mTLS and Cognito OIDC policy scaffolding.
+- `deploy/platform/security`: Service Mesh mTLS, edge auth proxy, and OPA authorization policy scaffolding.
 
 ## API And Event Contracts
 Each service keeps:
@@ -44,13 +44,14 @@ This keeps contracts with implementation ownership and supports separate lifecyc
 - Service output is returned in `/api/v1/status.integration`, mirrored by `/api/v1/summary`, and includes severity, degraded reasons, recommended actions, authoritative links, and disabled guided action contracts.
 
 ## Security Model
-- External user authentication is delegated through Cognito OIDC.
-- External user authorization is enforced in application code.
+- External user authentication is delegated through the OpenShift OAuth edge proxy.
+- Polaris sits behind that edge proxy and does not own browser bearer-token handling directly.
+- External user authorization is enforced in application code and backed by OPA where the service has a shared policy decision endpoint.
+- Service endpoints consume verified identity context from the edge proxy and should only trust proxy-provided principal headers.
 - Internal service-to-service authentication and authorization are delegated to the service mesh using mTLS and mesh policy.
 - Secret material is sourced from AWS Secrets Manager through External Secrets Operator.
-- Protected service endpoints (`/api/v1/status`) require identity context by default (`AUTH_MODE=enforced`) and read forwarded principal/group headers (`X-Asterism-Principal`, `X-Asterism-Groups`).
-- Polaris supports runtime-configured Cognito OIDC sign-in with Authorization Code + PKCE and sends bearer tokens to protected service APIs when configured.
-- External traffic enters through `https://asterism.apps.os.fowler.house/` and is routed by Service Mesh Gateway API resources rather than direct per-service OpenShift Routes.
+- Protected service endpoints (`/api/v1/status`) require identity context by default (`AUTH_MODE=enforced`) and can call a shared OPA decision service via `AUTHZ_OPA_URL`.
+- External traffic enters through `https://asterism.apps.os.fowler.house/`, lands on the OpenShift OAuth front door, and then reaches Polaris and downstream service APIs through the mesh ingress path rather than direct per-service OpenShift Routes.
 
 ## CI/CD And Supply Chain
 GitHub Actions pipeline includes:
