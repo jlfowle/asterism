@@ -29,6 +29,8 @@ spec:
               value: "enforced"
             - name: AUTH_REQUIRED_GROUP
               value: ""
+            - name: AUTHZ_OPA_URL
+              value: "http://asterism-opa:8181"
             - name: UNIFI_API_BASE_URL
               valueFrom:
                 secretKeyRef:

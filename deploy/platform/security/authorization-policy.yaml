@@ -53,6 +53,29 @@ spec:
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
+  name: asterism-opa
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: opa
+  action: ALLOW
+  rules:
+    - to:
+        - operation:
+            methods:
+              - GET
+            paths:
+              - /health
+    - to:
+        - operation:
+            methods:
+              - POST
+            paths:
+              - /v1/data/*
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
   name: polaris-shell
 spec:
   selector:

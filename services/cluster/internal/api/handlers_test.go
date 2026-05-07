@@ -92,7 +92,8 @@ func TestStatusAuthorizedWithPrincipal(t *testing.T) {
 	h.RegisterRoutes(mux)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
-	req.Header.Set("X-Asterism-Principal", "test-user")
+	req.Header.Set("X-Asterism-Principal", "spoofed-user")
+	req.Header.Set("X-Forwarded-User", "test-user")
 
 	res := httptest.NewRecorder()
 	mux.ServeHTTP(res, req)
@@ -124,7 +125,7 @@ func TestActionsAuthorizedWithPrincipal(t *testing.T) {
 	h.RegisterRoutes(mux)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/actions", nil)
-	req.Header.Set("X-Asterism-Principal", "test-user")
+	req.Header.Set("X-Forwarded-Email", "test-user")
 
 	res := httptest.NewRecorder()
 	mux.ServeHTTP(res, req)

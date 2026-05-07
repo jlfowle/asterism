@@ -2,44 +2,68 @@ package integration
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"net/http"
-	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
-func TestProbeWithConfigSummarizesClusterAndGitOps(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "Bearer test-token" {
-			http.Error(w, "missing token", http.StatusUnauthorized)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		switch r.URL.Path {
-		case "/version":
-			_, _ = fmt.Fprint(w, `{"gitVersion":"v1.34.6"}`)
-		case "/api/v1/nodes":
-			_, _ = fmt.Fprint(w, `{"items":[{"metadata":{"name":"node-a"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}`)
-		case "/api/v1/pods":
-			_, _ = fmt.Fprint(w, `{"items":[{"status":{"phase":"Running"}},{"status":{"phase":"Failed"}}]}`)
-		case "/api/v1/namespaces":
-			_, _ = fmt.Fprint(w, `{"items":[{},{}]}`)
-		case "/apis/apps/v1/deployments":
-			_, _ = fmt.Fprint(w, `{"items":[{"status":{"replicas":2,"availableReplicas":1}}]}`)
-		case "/apis/config.openshift.io/v1/clusterversions":
-			_, _ = fmt.Fprint(w, `{"items":[{"status":{"desired":{"version":"4.21.11"}}}]}`)
-		case "/apis/config.openshift.io/v1/clusteroperators":
-			_, _ = fmt.Fprint(w, `{"items":[{"metadata":{"name":"ingress"},"status":{"conditions":[{"type":"Available","status":"True"},{"type":"Progressing","status":"False"},{"type":"Degraded","status":"False"}]}}]}`)
-		case "/apis/argoproj.io/v1alpha1/namespaces/openshift-gitops/applications":
-			_, _ = fmt.Fprint(w, `{"items":[{"metadata":{"name":"app-asterism"},"status":{"health":{"status":"Healthy"},"sync":{"status":"Synced"}}}]}`)
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	defer server.Close()
+type roundTripperFunc func(*http.Request) (*http.Response, error)
 
-	snapshot := ProbeWithConfig(context.Background(), Config{
-		Endpoint: server.URL + "/version",
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func TestProbeWithConfigSummarizesClusterAndGitOps(t *testing.T) {
+	client := &http.Client{
+		Transport: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			if req.Header.Get("Authorization") != "Bearer test-token" {
+				return &http.Response{
+					StatusCode: http.StatusUnauthorized,
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader(`{"error":"missing token"}`)),
+					Request:    req,
+				}, nil
+			}
+
+			var body string
+			switch req.URL.Path {
+			case "/version":
+				body = `{"gitVersion":"v1.34.6"}`
+			case "/api/v1/nodes":
+				body = `{"items":[{"metadata":{"name":"node-a"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}`
+			case "/api/v1/pods":
+				body = `{"items":[{"status":{"phase":"Running"}},{"status":{"phase":"Failed"}}]}`
+			case "/api/v1/namespaces":
+				body = `{"items":[{},{}]}`
+			case "/apis/apps/v1/deployments":
+				body = `{"items":[{"status":{"replicas":2,"availableReplicas":1}}]}`
+			case "/apis/config.openshift.io/v1/clusterversions":
+				body = `{"items":[{"status":{"desired":{"version":"4.21.11"}}}]}`
+			case "/apis/config.openshift.io/v1/clusteroperators":
+				body = `{"items":[{"metadata":{"name":"ingress"},"status":{"conditions":[{"type":"Available","status":"True"},{"type":"Progressing","status":"False"},{"type":"Degraded","status":"False"}]}}]}`
+			case "/apis/argoproj.io/v1alpha1/namespaces/openshift-gitops/applications":
+				body = `{"items":[{"metadata":{"name":"app-asterism"},"status":{"health":{"status":"Healthy"},"sync":{"status":"Synced"}}}]}`
+			default:
+				return &http.Response{
+					StatusCode: http.StatusNotFound,
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader(`{"error":"not found"}`)),
+					Request:    req,
+				}, nil
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Request:    req,
+			}, nil
+		}),
+	}
+
+	snapshot := ProbeWithClient(context.Background(), client, Config{
+		Endpoint: "https://cluster.example/version",
 		Token:    "test-token",
 	})
 
