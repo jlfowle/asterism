@@ -26,6 +26,11 @@ spec:
           env:
             - name: PORT
               value: "8080"
+          volumeMounts:
+            - name: runtime-config
+              mountPath: /usr/share/nginx/html/runtime-config.json
+              subPath: runtime-config.json
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /healthz
@@ -47,3 +52,7 @@ spec:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+        - name: runtime-config
+          configMap:
+            name: polaris-runtime-config

@@ -1,25 +1,43 @@
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const DEFAULT_SIGN_OUT_PATH = "/oauth/sign_out";
 
-const isLocalDevelopment = () => {
-  if (typeof window === "undefined") {
-    return true;
+export const buildShellAuthState = (runtimeAuthConfig = null, principal = "") => {
+  const principalName = typeof principal === "string" ? principal.trim() : "";
+
+  if (!runtimeAuthConfig) {
+    return {
+      ready: false,
+      enabled: false,
+      authenticated: false,
+      principal: principalName,
+      modeLabel: "Checking identity",
+      signOutPath: DEFAULT_SIGN_OUT_PATH,
+      error: "",
+    };
   }
 
-  return LOCAL_HOSTS.has(window.location.hostname);
+  const edgeAuthEnabled = runtimeAuthConfig.edgeAuthEnabled === true;
+  const signOutPath = typeof runtimeAuthConfig.signOutPath === "string" && runtimeAuthConfig.signOutPath.trim() !== ""
+    ? runtimeAuthConfig.signOutPath.trim()
+    : DEFAULT_SIGN_OUT_PATH;
+  const modeLabel = typeof runtimeAuthConfig.modeLabel === "string" && runtimeAuthConfig.modeLabel.trim() !== ""
+    ? runtimeAuthConfig.modeLabel.trim()
+    : (edgeAuthEnabled ? "OpenShift SSO" : "Local development");
+
+  return {
+    ready: true,
+    enabled: edgeAuthEnabled,
+    authenticated: edgeAuthEnabled || principalName !== "",
+    principal: principalName,
+    modeLabel,
+    signOutPath,
+    error: typeof runtimeAuthConfig.error === "string" ? runtimeAuthConfig.error.trim() : "",
+  };
 };
 
-export const buildShellAuthState = (principal = "") => ({
-  ready: true,
-  enabled: !isLocalDevelopment(),
-  authenticated: !isLocalDevelopment(),
-  principal,
-  error: "",
-});
-
-export const signOut = () => {
+export const signOut = (signOutPath = DEFAULT_SIGN_OUT_PATH) => {
   if (typeof window === "undefined") {
     return;
   }
 
-  window.location.assign("/oauth/sign_out");
+  window.location.assign(signOutPath);
 };

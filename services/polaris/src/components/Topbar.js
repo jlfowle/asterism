@@ -7,10 +7,10 @@ const authLabel = (auth) => {
   if (auth.principal) {
     return auth.principal;
   }
-  if (auth.enabled) {
-    return "OpenShift SSO";
+  if (auth.error) {
+    return auth.error;
   }
-  return "Local development";
+  return auth.modeLabel || "Local development";
 };
 
 const Topbar = ({ auth, onSignOut }) => (

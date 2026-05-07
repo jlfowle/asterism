@@ -114,6 +114,10 @@ module.exports = {
       "microfrontends.json",
       path.resolve(__dirname, "public/microfrontends.json"),
     ),
+    emitPublicAsset(
+      "runtime-config.json",
+      path.resolve(__dirname, "public/runtime-config.json"),
+    ),
     new ModuleFederationPlugin({
       name: "polaris",
       shared: {

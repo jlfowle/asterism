@@ -4,6 +4,7 @@ namespace: asterism
 resources:
   - ./base/deployment.yaml
   - ./base/service.yaml
+  - ./base/runtime-config-configmap.yaml
   - ./base/auth-proxy-serviceaccount.yaml
   - ./base/auth-proxy-deployment.yaml
   - ./base/auth-proxy-service.yaml

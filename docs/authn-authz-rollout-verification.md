@@ -16,14 +16,14 @@ This checklist is the working verification plan for the OpenShift OAuth edge pro
 - [ ] Authenticated `GET /` does not return a 503 or upstream reset from oauth-proxy
 - [ ] Sign-out returns through the OpenShift OAuth logout path
 - [ ] Public requests use `GET`, not `HEAD`, when checking the routed edge behavior
-- [ ] `asterism-internal.apps.os.fowler.house` serves the Polaris shell without routing back through the auth proxy
+- [ ] `asterism-internal.apps.os.fowler.house` serves the Polaris shell through the same auth-proxy front door
 - [ ] oauth-proxy forwards the shell service Host header upstream, not the public browser host
 
 ## Service Authorization Checks
 
-- [ ] `GET /api/services/{service}/api/v1/status` succeeds for an authenticated principal
-- [ ] `GET /api/services/{service}/api/v1/summary` succeeds for an authenticated principal
-- [ ] `GET /api/services/{service}/api/v1/actions` stays read-only and returns disabled contracts
+- [ ] `GET /api/services/{service}/api/v1/status` succeeds for an authenticated principal through the Polaris proxy
+- [ ] `GET /api/services/{service}/api/v1/summary` succeeds for an authenticated principal through the Polaris proxy
+- [ ] `GET /api/services/{service}/api/v1/actions` stays read-only and returns disabled contracts through the Polaris proxy
 - [ ] Spoofed `X-Asterism-Principal` headers are ignored
 - [ ] The service still accepts proxy-provided `X-Forwarded-User` and `X-Forwarded-Email` headers
 - [ ] When `AUTHZ_OPA_URL` is set, OPA denial returns `403`

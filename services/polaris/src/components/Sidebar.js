@@ -1,6 +1,18 @@
 import React from "react";
 
-const Sidebar = () => (
+const sidebarIdentityLabel = (auth) => {
+  if (!auth?.ready) {
+    return "Checking identity";
+  }
+
+  if (auth.error) {
+    return auth.error;
+  }
+
+  return auth.modeLabel || "Local development";
+};
+
+const Sidebar = ({ auth }) => (
   <aside className="sidebar">
     <p className="sidebar-heading">Navigation</p>
     <ul>
@@ -10,7 +22,7 @@ const Sidebar = () => (
       <li><a href="#events">Events</a></li>
     </ul>
     <div className="sidebar-footnote">
-      External identity: OpenShift SSO
+      External identity: {sidebarIdentityLabel(auth)}
       <br />
       In-cluster trust: Service Mesh mTLS
     </div>

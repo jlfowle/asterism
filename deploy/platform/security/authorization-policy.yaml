@@ -22,10 +22,16 @@ spec:
         - source:
             principals:
               - cluster.local/ns/istio-ingress/sa/default
+        - source:
+            principals:
+              - cluster.local/ns/asterism/sa/default
     - from:
         - source:
             principals:
               - cluster.local/ns/istio-ingress/sa/default
+        - source:
+            principals:
+              - cluster.local/ns/asterism/sa/default
       to:
         - operation:
             methods:
