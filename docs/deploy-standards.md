@@ -79,6 +79,7 @@ runtime secret dependency.
 - Port 80 (external/cluster port) → 8080 (container port)
 - Selector matches the deployment: `app.kubernetes.io/name: {service}`
 - No external traffic exposure from this manifest. Public traffic is attached through Gateway API routing in `deploy/platform/routing`.
+- If a service ships a companion proxy or other sibling deployment in the same kustomization, give the primary workload a role-specific selector label so the Service cannot accidentally select the sibling pod. For Polaris, the shell uses `app.kubernetes.io/component: shell`, while the auth proxy uses `app.kubernetes.io/component: auth-proxy`.
 
 #### 3. `externalsecret.yaml`
 - Optional ExternalSecrets Operator CRD

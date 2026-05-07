@@ -11,10 +11,11 @@ This checklist is the working verification plan for the OpenShift OAuth edge pro
 
 ## Public Edge Checks
 
-- [ ] Unauthenticated `GET /` redirects into OpenShift login
+- [ ] Unauthenticated `GET /` reaches the OpenShift login gate through oauth-proxy
 - [ ] Authenticated `GET /` renders the Polaris shell
 - [ ] Sign-out returns through the OpenShift OAuth logout path
 - [ ] Public requests use `GET`, not `HEAD`, when checking the routed edge behavior
+- [ ] `asterism-internal.apps.os.fowler.house` serves the Polaris shell without routing back through the auth proxy
 
 ## Service Authorization Checks
 
@@ -30,6 +31,7 @@ This checklist is the working verification plan for the OpenShift OAuth edge pro
 - [ ] The GitOps repository reports the app as Synced and Healthy
 - [ ] The running pod image digests match the release manifest
 - [ ] The release asset still renders with pod-template annotations and digest-pinned image references
+- [ ] The `polaris` Service resolves only the Polaris shell pod and not the auth-proxy pod
 
 ## Notes
 
