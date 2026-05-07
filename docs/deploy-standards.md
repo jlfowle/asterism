@@ -49,6 +49,7 @@ deploy/
 - `deploy/platform/routing/` contains Asterism's Gateway API `HTTPRoute` resources for the single public entry point
 - `deploy/platform/security/` contains infrastructure cross-cutting concerns, not service-owned
 - The public host is fronted by the Polaris auth proxy deployment in `services/polaris/deploy/base/auth-proxy-*`; it owns the OpenShift OAuth edge and forwards trusted user identity into Polaris and downstream APIs
+- When the auth proxy runs behind the OpenShift edge route without a mounted serving cert, it must set `--https-address=` so oauth-proxy stays HTTP-only and does not crash while loading TLS config
 - The consolidation is a simple aggregation via kustomize resource references
 
 ## Service Deploy Manifest Requirements
@@ -68,6 +69,7 @@ runtime secret dependency.
   - `AUTH_MODE=enforced`
   - `AUTHZ_OPA_URL=http://asterism-opa:8181` when the service uses shared OPA-backed authorization
   - Service-specific environment variables (e.g., `CLUSTER_API_URL` for services that need it)
+- The pod template metadata must include an `annotations` map, even when it starts empty, so release metadata overlays can inject immutable release annotations without failing
 - Security context: non-root user, read-only root filesystem, no Linux capabilities
 - Istio sidecar injection enabled (via label `sidecar.istio.io/inject: "true"`)
 
@@ -89,6 +91,7 @@ runtime secret dependency.
 
 Current service secret shapes:
 
+- `/asterism/auth-proxy`: `cookieSecret`
 - `/asterism/unifi`: `apiBaseUrl`, `apiToken`, optional `siteId`, optional `consoleUrl`
 - `/asterism/pfsense`: `snmpHost`, `snmpCommunity`, optional `snmpPort`, optional `consoleUrl`, optional `expectedUpInterfaces`
 
