@@ -23,11 +23,6 @@ spec:
           ports:
             - containerPort: 8080
               name: http
-          volumeMounts:
-            - name: oidc-config
-              mountPath: /usr/share/nginx/html/oidc-config.json
-              subPath: oidc-config.json
-              readOnly: true
           env:
             - name: PORT
               value: "8080"
@@ -52,7 +47,3 @@ spec:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
-      volumes:
-        - name: oidc-config
-          configMap:
-            name: polaris-oidc-config

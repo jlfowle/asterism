@@ -8,6 +8,6 @@ test("renders the dashboard layout", async () => {
   expect(getByText("Dashboard")).toBeInTheDocument();
   expect(getByText("Operator Cockpit")).toBeInTheDocument();
   expect(getByText("UniFi")).toBeInTheDocument();
-  expect(await screen.findByText("OpenShift SSO")).toBeInTheDocument();
-  expect(await screen.findByRole("button", { name: "Sign out" })).toBeInTheDocument();
+  expect(await screen.findByText("Local development")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
 });

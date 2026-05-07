@@ -4,10 +4,13 @@ const authLabel = (auth) => {
   if (!auth?.ready) {
     return "Checking identity";
   }
-  if (auth.authenticated) {
-    return auth.principal || "Signed in";
+  if (auth.principal) {
+    return auth.principal;
   }
-  return "OpenShift SSO";
+  if (auth.enabled) {
+    return "OpenShift SSO";
+  }
+  return "Local development";
 };
 
 const Topbar = ({ auth, onSignOut }) => (
@@ -19,7 +22,7 @@ const Topbar = ({ auth, onSignOut }) => (
     </div>
     <div className="identity-panel">
       <span className="status-pill">{authLabel(auth)}</span>
-      {auth?.ready && (
+      {auth?.enabled && (
         <button type="button" onClick={onSignOut}>Sign out</button>
       )}
     </div>

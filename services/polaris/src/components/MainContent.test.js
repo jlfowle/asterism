@@ -80,9 +80,10 @@ test("hydrates cards from service-owned module manifests", async () => {
   global.fetch = originalFetch;
 });
 
-test("sends bearer token when fetching protected service status", async () => {
+test("surfaces principal context without browser-managed bearer tokens", async () => {
   const originalFetch = global.fetch;
   const statusFetches = [];
+  const principals = [];
 
   global.fetch = jest.fn((url, options = {}) => {
     if (url === "/microfrontends.json") {
@@ -107,6 +108,7 @@ test("sends bearer token when fetching protected service status", async () => {
       return Promise.resolve({
         ok: true,
         json: async () => ({
+          principal: "test-user",
           integration: {
             configured: true,
             reachable: true,
@@ -130,15 +132,11 @@ test("sends bearer token when fetching protected service status", async () => {
     });
   });
 
-  render(<MainContent auth={{
-    ready: true,
-    enabled: true,
-    authenticated: true,
-    authorizationHeader: "Bearer test-token",
-  }} />);
+  render(<MainContent onPrincipalChange={(principal) => principals.push(principal)} />);
 
   expect(await screen.findByText("healthy")).toBeInTheDocument();
-  expect(statusFetches[0].headers.Authorization).toBe("Bearer test-token");
+  expect(statusFetches[0].headers.Authorization).toBeUndefined();
+  expect(principals).toContain("test-user");
 
   global.fetch = originalFetch;
 });
