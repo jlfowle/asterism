@@ -13,6 +13,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/component: auth-proxy
+      annotations: {}
     spec:
       serviceAccountName: asterism-auth-proxy
       securityContext:
