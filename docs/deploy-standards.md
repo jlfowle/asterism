@@ -91,6 +91,7 @@ runtime secret dependency.
 
 Current service secret shapes:
 
+- `/asterism/auth-proxy`: `cookieSecret`
 - `/asterism/unifi`: `apiBaseUrl`, `apiToken`, optional `siteId`, optional `consoleUrl`
 - `/asterism/pfsense`: `snmpHost`, `snmpCommunity`, optional `snmpPort`, optional `consoleUrl`, optional `expectedUpInterfaces`
 
