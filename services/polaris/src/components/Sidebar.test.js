@@ -7,4 +7,5 @@ test("renders sidebar links", () => {
   expect(getByText("Dashboard")).toBeInTheDocument();
   expect(getByText("Integrations")).toBeInTheDocument();
   expect(getByText("Security")).toBeInTheDocument();
+  expect(getByText(/External identity: OpenShift SSO/)).toBeInTheDocument();
 });
