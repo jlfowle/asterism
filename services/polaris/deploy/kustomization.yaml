@@ -8,6 +8,7 @@ resources:
   - ./base/auth-proxy-serviceaccount.yaml
   - ./base/auth-proxy-deployment.yaml
   - ./base/auth-proxy-service.yaml
+  - ./base/externalsecret.yaml
 images:
   - name: polaris
     newName: ghcr.io/jlfowle/asterism-polaris
