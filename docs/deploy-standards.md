@@ -34,9 +34,11 @@ deploy/
 ├── kustomization.yaml              # AUTO-GENERATED; references all services and platform policies
 ├── platform/
 │   ├── routing/                    # Gateway API HTTPRoutes for public app routing
-│   └── security/                   # Cross-cutting Istio and OIDC policies
+│   └── security/                   # Cross-cutting Istio, OPA, and edge-auth policies
 │       ├── authorization-policy.yaml
-│       ├── request-authentication.yaml
+│       ├── opa-configmap.yaml
+│       ├── opa-deployment.yaml
+│       ├── opa-service.yaml
 │       ├── peer-authentication.yaml
 │       └── kustomization.yaml
 └── [other platform-level resources]
@@ -46,6 +48,7 @@ deploy/
 - `deploy/kustomization.yaml` is **auto-generated** by `scripts/update-deploy.sh`; do not edit it manually
 - `deploy/platform/routing/` contains Asterism's Gateway API `HTTPRoute` resources for the single public entry point
 - `deploy/platform/security/` contains infrastructure cross-cutting concerns, not service-owned
+- The public host is fronted by the Polaris auth proxy deployment in `services/polaris/deploy/base/auth-proxy-*`; it owns the OpenShift OAuth edge and forwards trusted user identity into Polaris and downstream APIs
 - The consolidation is a simple aggregation via kustomize resource references
 
 ## Service Deploy Manifest Requirements
@@ -63,6 +66,7 @@ runtime secret dependency.
 - Required environment variables:
   - `PORT=8080`
   - `AUTH_MODE=enforced`
+  - `AUTHZ_OPA_URL=http://asterism-opa:8181` when the service uses shared OPA-backed authorization
   - Service-specific environment variables (e.g., `CLUSTER_API_URL` for services that need it)
 - Security context: non-root user, read-only root filesystem, no Linux capabilities
 - Istio sidecar injection enabled (via label `sidecar.istio.io/inject: "true"`)
@@ -283,3 +287,4 @@ If `git diff` shows no changes, the discovery is up to date. If changes exist, c
 - [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/)
 - [ExternalSecrets Operator](https://external-secrets.io/)
 - [Istio Injection](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/)
+- [Authn/Authz rollout verification](./authn-authz-rollout-verification.md)
