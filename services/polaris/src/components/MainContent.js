@@ -247,7 +247,9 @@ const MainContent = ({ onPrincipalChange }) => {
       }));
 
       try {
-        const response = await fetch(service.statusApi, {
+        const statusApi = service.statusApi;
+        // Status requests stay on the authenticated public origin and are forwarded to the service pods by Polaris.
+        const response = await fetch(statusApi, {
           headers: {
             Accept: "application/json",
           },
