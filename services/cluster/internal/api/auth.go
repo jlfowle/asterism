@@ -17,6 +17,7 @@ const principalContextKey contextKey = "principal"
 type AuthMiddleware struct {
 	mode          string
 	requiredGroup string
+	opaEnabled    bool
 	authorizer    authz.Authorizer
 }
 
@@ -27,10 +28,12 @@ func NewAuthMiddlewareFromEnv() AuthMiddleware {
 	}
 
 	requiredGroup := strings.TrimSpace(os.Getenv("AUTH_REQUIRED_GROUP"))
+	opaURL := strings.TrimSpace(os.Getenv("AUTHZ_OPA_URL"))
 
 	return AuthMiddleware{
 		mode:          mode,
 		requiredGroup: requiredGroup,
+		opaEnabled:    opaURL != "",
 		authorizer:    authz.NewAuthorizer(requiredGroup),
 	}
 }
@@ -48,7 +51,7 @@ func (a AuthMiddleware) Protect(next http.Handler) http.Handler {
 			return
 		}
 
-		if a.requiredGroup != "" {
+		if a.requiredGroup != "" || a.opaEnabled {
 			groups := a.readGroups(r)
 			allowed, reason, err := a.authorizer.IsAllowed(r.Context(), principal, groups, r.URL.Path, r.Method)
 			if err != nil {
@@ -67,7 +70,7 @@ func (a AuthMiddleware) Protect(next http.Handler) http.Handler {
 }
 
 func (a AuthMiddleware) readPrincipal(r *http.Request) string {
-	for _, header := range []string{"X-Asterism-Principal", "X-Forwarded-User", "X-Forwarded-Email"} {
+	for _, header := range []string{"X-Forwarded-User", "X-Forwarded-Email"} {
 		value := strings.TrimSpace(r.Header.Get(header))
 		if value != "" {
 			return value

@@ -2,28 +2,47 @@ package integration
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"net/http"
-	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
-func TestProbeWithClientSummarizesUniFiNetwork(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		switch r.URL.Path {
-		case "/proxy/network/api/s/default/stat/device":
-			_, _ = fmt.Fprint(w, `{"data":[{"type":"uap","state":1},{"type":"usw","state":0,"upgradable":true}]}`)
-		case "/proxy/network/api/s/default/stat/sta":
-			_, _ = fmt.Fprint(w, `{"data":[{"is_wired":false},{"is_wired":true,"is_guest":true}]}`)
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	defer server.Close()
+type roundTripperFunc func(*http.Request) (*http.Response, error)
 
-	snapshot := ProbeWithClient(context.Background(), server.Client(), Config{
-		BaseURL: server.URL,
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func TestProbeWithClientSummarizesUniFiNetwork(t *testing.T) {
+	client := &http.Client{
+		Transport: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			var body string
+			switch req.URL.Path {
+			case "/proxy/network/api/s/default/stat/device":
+				body = `{"data":[{"type":"uap","state":1},{"type":"usw","state":0,"upgradable":true}]}`
+			case "/proxy/network/api/s/default/stat/sta":
+				body = `{"data":[{"is_wired":false},{"is_wired":true,"is_guest":true}]}`
+			default:
+				return &http.Response{
+					StatusCode: http.StatusNotFound,
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader(`{"error":"not found"}`)),
+					Request:    req,
+				}, nil
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Request:    req,
+			}, nil
+		}),
+	}
+
+	snapshot := ProbeWithClient(context.Background(), client, Config{
+		BaseURL: "https://unifi.example",
 		Site:    "default",
 	})
 

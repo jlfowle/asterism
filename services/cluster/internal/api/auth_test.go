@@ -1,10 +1,22 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
+
+type stubAuthorizer struct {
+	allow bool
+}
+
+func (s stubAuthorizer) IsAllowed(ctx context.Context, principal string, groups []string, resource string, verb string) (bool, string, error) {
+	if s.allow {
+		return true, "", nil
+	}
+	return false, "denied", nil
+}
 
 func TestAuthMiddlewareDisabled(t *testing.T) {
 	middleware := AuthMiddleware{
@@ -73,6 +85,32 @@ func TestAuthMiddlewareEnforcedWithPrincipal(t *testing.T) {
 	}
 }
 
+func TestAuthMiddlewareOPAEnforcedWithoutRequiredGroup(t *testing.T) {
+	t.Setenv("AUTH_MODE", "enforced")
+	t.Setenv("AUTH_REQUIRED_GROUP", "")
+	t.Setenv("AUTHZ_OPA_URL", "http://example.invalid")
+
+	middleware := NewAuthMiddlewareFromEnv()
+	if !middleware.opaEnabled {
+		t.Fatalf("expected opaEnabled to be true when AUTHZ_OPA_URL is configured")
+	}
+	middleware.authorizer = stubAuthorizer{allow: false}
+
+	handler := middleware.Protect(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest("GET", "/api/test", nil)
+	req.Header.Set("X-Forwarded-User", "user@example.com")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 when OPA denies access without required group, got %d", rec.Code)
+	}
+}
+
 func TestAuthMiddlewareReadPrincipalPriority(t *testing.T) {
 	middleware := AuthMiddleware{
 		mode:          "enforced",
@@ -80,18 +118,18 @@ func TestAuthMiddlewareReadPrincipalPriority(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		headers   map[string]string
-		expected  string
+		name     string
+		headers  map[string]string
+		expected string
 	}{
 		{
-			name: "X-Asterism-Principal takes priority",
+			name: "X-Forwarded-User takes priority",
 			headers: map[string]string{
 				"X-Asterism-Principal": "principal@example.com",
-				"X-Forwarded-User":      "user@example.com",
-				"X-Forwarded-Email":     "email@example.com",
+				"X-Forwarded-User":     "user@example.com",
+				"X-Forwarded-Email":    "email@example.com",
 			},
-			expected: "principal@example.com",
+			expected: "user@example.com",
 		},
 		{
 			name: "X-Forwarded-User fallback",
@@ -104,7 +142,8 @@ func TestAuthMiddlewareReadPrincipalPriority(t *testing.T) {
 		{
 			name: "X-Forwarded-Email fallback",
 			headers: map[string]string{
-				"X-Forwarded-Email": "email@example.com",
+				"X-Asterism-Principal": "principal@example.com",
+				"X-Forwarded-Email":    "email@example.com",
 			},
 			expected: "email@example.com",
 		},
@@ -134,6 +173,27 @@ func TestAuthMiddlewareReadPrincipalPriority(t *testing.T) {
 				t.Errorf("expected status 200, got %d: %s", rec.Code, rec.Body.String())
 			}
 		})
+	}
+}
+
+func TestAuthMiddlewareIgnoresAsterismPrincipal(t *testing.T) {
+	middleware := AuthMiddleware{
+		mode:          "enforced",
+		requiredGroup: "",
+	}
+
+	handler := middleware.Protect(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest("GET", "/api/test", nil)
+	req.Header.Set("X-Asterism-Principal", "principal@example.com")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 when only X-Asterism-Principal is present, got %d", rec.Code)
 	}
 }
 

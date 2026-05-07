@@ -40,6 +40,12 @@ func TestNewAuthorizer(t *testing.T) {
 			if auth == nil {
 				t.Fatal("expected non-nil authorizer")
 			}
+
+			if tt.opaURL != "" {
+				if _, ok := auth.(*OPAAuthorizer); !ok {
+					t.Fatalf("expected OPA-backed authorizer when AUTHZ_OPA_URL is set, got %T", auth)
+				}
+			}
 		})
 	}
 }
