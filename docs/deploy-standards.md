@@ -49,6 +49,7 @@ deploy/
 - `deploy/platform/routing/` contains Asterism's Gateway API `HTTPRoute` resources for the single public entry point
 - `deploy/platform/security/` contains infrastructure cross-cutting concerns, not service-owned
 - The public host is fronted by the Polaris auth proxy deployment in `services/polaris/deploy/base/auth-proxy-*`; it owns the OpenShift OAuth edge and forwards trusted user identity into Polaris and downstream APIs
+- When the auth proxy runs behind the OpenShift edge route without a mounted serving cert, it must set `--https-address=` so oauth-proxy stays HTTP-only and does not crash while loading TLS config
 - The consolidation is a simple aggregation via kustomize resource references
 
 ## Service Deploy Manifest Requirements
