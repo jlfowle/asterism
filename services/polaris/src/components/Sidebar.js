@@ -10,7 +10,7 @@ const Sidebar = () => (
       <li><a href="#events">Events</a></li>
     </ul>
     <div className="sidebar-footnote">
-      External identity: Cognito OIDC
+      External identity: OpenShift SSO
       <br />
       In-cluster trust: Service Mesh mTLS
     </div>

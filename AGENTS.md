@@ -14,7 +14,7 @@ This file is the fast-start guidance for any AI agent or contributor working in 
 - Prefer OpenShift-native patterns, APIs, and deployment constructs when there is a reasonable choice.
 
 ## Security Model
-- External user authentication is delegated through OpenID Connect with AWS Cognito.
+- External user authentication is delegated through the OpenShift OAuth edge proxy.
 - External user authorization is enforced in the application.
 - Internal service-to-service authentication and authorization are delegated to the service mesh with mTLS and mesh policy.
 - Sensitive runtime values must come from External Secrets Operator backed by AWS Secrets Manager.
