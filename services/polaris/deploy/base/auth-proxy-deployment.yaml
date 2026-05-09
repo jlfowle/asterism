@@ -37,6 +37,7 @@ spec:
             - --https-address=
             - --upstream=http://polaris/
             - --pass-host-header=false
+            - '--openshift-delegate-urls={"/":{"resource":"services","resourceName":"asterism-auth-proxy","verb":"get"}}'
             - --openshift-service-account=asterism-auth-proxy
             - '--openshift-sar={"namespace":"$(POD_NAMESPACE)","resource":"services","resourceName":"asterism-auth-proxy","verb":"get"}'
             - --cookie-secret-file=/etc/oauth-proxy-cookie/cookie-secret
