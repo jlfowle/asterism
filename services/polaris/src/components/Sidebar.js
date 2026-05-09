@@ -18,8 +18,6 @@ const Sidebar = ({ auth }) => (
     <ul>
       <li><a href="#dashboard">Dashboard</a></li>
       <li><a href="#integrations">Integrations</a></li>
-      <li><a href="#security">Security</a></li>
-      <li><a href="#events">Events</a></li>
     </ul>
     <div className="sidebar-footnote">
       External identity: {sidebarIdentityLabel(auth)}

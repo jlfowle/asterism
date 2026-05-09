@@ -1,11 +1,11 @@
 import React from "react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import Sidebar from "./Sidebar";
 
 test("renders sidebar links", () => {
-  const { getByText } = render(<Sidebar auth={{ ready: true, modeLabel: "OpenShift SSO" }} />);
-  expect(getByText("Dashboard")).toBeInTheDocument();
-  expect(getByText("Integrations")).toBeInTheDocument();
-  expect(getByText("Security")).toBeInTheDocument();
-  expect(getByText(/External identity: OpenShift SSO/)).toBeInTheDocument();
+  render(<Sidebar auth={{ ready: true, modeLabel: "OpenShift SSO" }} />);
+  expect(screen.getByText("Dashboard")).toBeInTheDocument();
+  expect(screen.getByText("Integrations")).toBeInTheDocument();
+  expect(screen.queryByText("Security")).toBeNull();
+  expect(screen.getByText(/External identity: OpenShift SSO/)).toBeInTheDocument();
 });
