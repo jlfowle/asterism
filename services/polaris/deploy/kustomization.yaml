@@ -6,6 +6,7 @@ resources:
   - ./base/service.yaml
   - ./base/runtime-config-configmap.yaml
   - ./base/auth-proxy-serviceaccount.yaml
+  - ./base/auth-proxy-auth-delegator.yaml
   - ./base/auth-proxy-deployment.yaml
   - ./base/auth-proxy-service.yaml
   - ./base/externalsecret.yaml
