@@ -176,7 +176,7 @@ jobs:
 
       - name: Install Cosign
         if: steps.release_state.outputs.release_exists != 'true'
-        uses: sigstore/cosign-installer@v4.1.1
+        uses: sigstore/cosign-installer@v4.1.2
 
       - name: Log in to GHCR
         if: steps.release_state.outputs.release_exists != 'true'
