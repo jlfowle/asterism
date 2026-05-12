@@ -20,7 +20,7 @@
       "pnpmVersion": "none",
       "installYarnUsingApt": false
     },
-    "ghcr.io/devcontainers/features/go:1.3.3": {
+    "ghcr.io/devcontainers/features/go:1.3.4": {
       "version": "1.26.2",
       "golangciLintVersion": "2.11.4"
     },
