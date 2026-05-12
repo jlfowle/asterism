@@ -1,25 +1,25 @@
 {
   "services": [
     {
-      "id": "unifi",
-      "displayName": "UniFi",
-      "description": "Wireless controller health and client telemetry.",
-      "statusApi": "/api/services/unifi/api/v1/status",
-      "moduleManifest": "/ui/services/unifi/module.json"
-    },
-    {
       "id": "cluster",
-      "displayName": "OpenShift",
-      "description": "Cluster workload and node status from in-cluster APIs.",
+      "displayName": "OpenShift Cluster",
+      "description": "Node, workload, operator, and GitOps status from read-only cluster APIs.",
       "statusApi": "/api/services/cluster/api/v1/status",
       "moduleManifest": "/ui/services/cluster/module.json"
     },
     {
       "id": "pfsense",
-      "displayName": "pfSense",
-      "description": "Gateway availability and network edge insights.",
+      "displayName": "pfSense Gateway",
+      "description": "Firewall and gateway status from read-only pfSense SNMP.",
       "statusApi": "/api/services/pfsense/api/v1/status",
       "moduleManifest": "/ui/services/pfsense/module.json"
+    },
+    {
+      "id": "unifi",
+      "displayName": "UniFi Network",
+      "description": "Wireless, network device, and client status from the local UniFi Network API.",
+      "statusApi": "/api/services/unifi/api/v1/status",
+      "moduleManifest": "/ui/services/unifi/module.json"
     }
   ]
 }

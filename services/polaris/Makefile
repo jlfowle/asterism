@@ -1,18 +1,21 @@
-.PHONY: run build test lint deps clean
+.PHONY: run build test lint deps clean verify-registry
 
-run: deps
+run: deps verify-registry
 	yarn start
 
-build: dist/main.js
+build: verify-registry dist/main.js
 
 dist/main.js: $(wildcard src/**/*.js) deps
 	yarn build
 
-test: deps
+test: deps verify-registry
 	yarn test
 
-lint: deps
+lint: deps verify-registry
 	yarn lint
+
+verify-registry:
+	../../scripts/generate-microfrontends-registry.sh --check
 
 deps:
 	yarn install --frozen-lockfile --check-files

@@ -104,6 +104,10 @@ main() {
             echo "  - $service"
         done
     fi
+
+    echo ""
+    echo -e "${BLUE}Generating Polaris microfrontend registry...${NC}"
+    "$REPO_ROOT/scripts/generate-microfrontends-registry.sh" --write
     
     # Generate kustomization
     echo ""
