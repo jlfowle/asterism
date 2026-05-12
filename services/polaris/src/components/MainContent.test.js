@@ -5,9 +5,9 @@ import MainContent from "./MainContent";
 test("renders welcome message", () => {
   const { getByText } = render(<MainContent />);
   expect(getByText("Operator Cockpit")).toBeInTheDocument();
-  expect(getByText("UniFi")).toBeInTheDocument();
-  expect(getByText("OpenShift")).toBeInTheDocument();
-  expect(getByText("pfSense")).toBeInTheDocument();
+  expect(getByText("UniFi Network")).toBeInTheDocument();
+  expect(getByText("OpenShift Cluster")).toBeInTheDocument();
+  expect(getByText("pfSense Gateway")).toBeInTheDocument();
 });
 
 test("hydrates cards from service-owned module manifests", async () => {
