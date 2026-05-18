@@ -17,7 +17,7 @@ COPY . .
 RUN yarn build
 
 # Stage 2: Serve the application with Nginx
-FROM nginxinc/nginx-unprivileged:1.29-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 
 # Define build arguments
 ARG VERSION
