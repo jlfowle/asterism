@@ -29,7 +29,7 @@ jobs:
       COSIGN_EXPERIMENTAL: "true"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: main
@@ -220,7 +220,7 @@ jobs:
 
       - name: Checkout reviewed merge commit
         if: steps.release_state.outputs.release_exists != 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.MERGE_COMMIT_SHA }}
           path: source-tree
@@ -282,7 +282,7 @@ jobs:
           repositories: ${{ steps.cd_repo.outputs.name }}
 
       - name: Checkout os-config repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ steps.cd_repo.outputs.full_name }}
           token: ${{ steps.cd_token.outputs.token }}
