@@ -36,7 +36,7 @@ jobs:
 
       - name: Compute release version
         id: version
-        uses: thenativeweb/get-next-version@2.7.1
+        uses: thenativeweb/get-next-version@2.7.6
         with:
           prefix: v
 
